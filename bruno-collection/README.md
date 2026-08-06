@@ -17,8 +17,9 @@ y Keycloak en `localhost:80`.
 
 1. Abre Bruno → **Open Collection** → selecciona esta carpeta `bruno-collection`.
 2. Panel de environments (arriba a la derecha) → selecciona **Local**.
-3. Edita el env `Local` (icono lápiz) y pega el `clientSecret` que devolvió el script.
-   El `token` se rellena solo cuando corras `Auth/Get Token`.
+3. Edita el env `Local` (icono lápiz) y **pega el `clientSecret` que devolvió el script**
+   (el fichero trae `PASTE_HERE_FROM_create-keycloak-client.ps1` como placeholder — no
+   se commitea el valor real). El `token` se rellena solo cuando corras `Auth/Get Token`.
 
 ## Cómo usar
 
