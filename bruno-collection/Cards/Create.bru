@@ -1,0 +1,28 @@
+meta {
+  name: Create
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{gatewayUrl}}/eazybank/cards/api/create?mobileNumber={{mobileNumber}}
+  body: none
+  auth: bearer
+}
+
+params:query {
+  mobileNumber: {{mobileNumber}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Requiere que la cuenta con ese mobileNumber ya exista.
+  El endpoint es POST sin body: solo query param.
+}
+
+tests {
+  test("201 Created", function() { expect(res.status).to.equal(201); });
+}

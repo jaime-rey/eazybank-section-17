@@ -1,0 +1,7 @@
+[
+  { "name": "Alice Morgan", "email": "alice@eazybank.com",   "mobileNumber": "5551000001" },
+  { "name": "Bob Chen",     "email": "bob@eazybank.com",     "mobileNumber": "5551000002" },
+  { "name": "Carla Ruiz",   "email": "carla@eazybank.com",   "mobileNumber": "5551000003" },
+  { "name": "David Patel",  "email": "david@eazybank.com",   "mobileNumber": "5551000004" },
+  { "name": "Elena Rossi",  "email": "elena@eazybank.com",   "mobileNumber": "5551000005" }
+]

@@ -1,0 +1,14 @@
+# Maven build artefacts
+**/target/
+
+# IntelliJ
+.idea/
+*.iml
+
+# Bruno runtime state
+bruno-collection/environments/*.local.bru
+bruno-collection/.bru/
+
+# OS
+.DS_Store
+Thumbs.db

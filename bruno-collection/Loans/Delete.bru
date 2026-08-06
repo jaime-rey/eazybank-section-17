@@ -1,0 +1,23 @@
+meta {
+  name: Delete
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{gatewayUrl}}/eazybank/loans/api/delete?mobileNumber={{mobileNumber}}
+  body: none
+  auth: bearer
+}
+
+params:query {
+  mobileNumber: {{mobileNumber}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("200 OK", function() { expect(res.status).to.equal(200); });
+}

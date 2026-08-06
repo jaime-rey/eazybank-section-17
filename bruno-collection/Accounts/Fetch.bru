@@ -1,0 +1,28 @@
+meta {
+  name: Fetch
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{gatewayUrl}}/eazybank/accounts/api/fetch?mobileNumber={{mobileNumber}}
+  body: none
+  auth: none
+}
+
+params:query {
+  mobileNumber: {{mobileNumber}}
+}
+
+script:post-response {
+  if (res.status === 200 && res.body && res.body.accountsDto && res.body.accountsDto.accountNumber) {
+    const accNum = String(res.body.accountsDto.accountNumber);
+    bru.setVar("accountNumber", accNum);
+    bru.setEnvVar("accountNumber", accNum);
+    console.log("Fetch saved -> accountNumber=" + accNum);
+  }
+}
+
+tests {
+  test("200 OK", function() { expect(res.status).to.equal(200); });
+}

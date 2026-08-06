@@ -6,11 +6,11 @@ serviceName: gatewayserver
 appLabel: gatewayserver
 appName: gatewayserver
 
-replicaCount: 1
+replicaCount: 2
 
 image:
   repository: eazybytes/gatewayserver
-  tag: s14
+  tag: s17
 
 containerPort: 8072
 
@@ -22,7 +22,7 @@ service:
 appname_enabled: true
 profile_enabled: true
 config_enabled: true
-eureka_enabled: true
 resouceserver_enabled: true
 otel_enabled: true
 kafka_enabled: false
+redis_enabled: true

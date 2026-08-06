@@ -1,0 +1,36 @@
+meta {
+  name: Update
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{gatewayUrl}}/eazybank/accounts/api/update
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "{{name}} (updated)",
+    "email": "{{email}}",
+    "mobileNumber": "{{mobileNumber}}",
+    "accountsDto": {
+      "accountNumber": {{accountNumber}},
+      "accountType": "Savings",
+      "branchAddress": "742 Evergreen Terrace, Springfield"
+    }
+  }
+}
+
+docs {
+  Requiere haber corrido antes Fetch para poblar {{accountNumber}}.
+}
+
+tests {
+  test("200 OK", function() { expect(res.status).to.equal(200); });
+}

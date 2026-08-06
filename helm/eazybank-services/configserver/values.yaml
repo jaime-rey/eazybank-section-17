@@ -6,11 +6,11 @@ serviceName: configserver
 appLabel: configserver
 appName: configserver
 
-replicaCount: 1
+replicaCount: 2
 
 image:
   repository: eazybytes/configserver
-  tag: s14
+  tag: s17
 
 containerPort: 8071
 
@@ -22,7 +22,6 @@ service:
 appname_enabled: true
 profile_enabled: false
 config_enabled: false
-eureka_enabled: false
 resouceserver_enabled: false
 otel_enabled: true
 kafka_enabled: false

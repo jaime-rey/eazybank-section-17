@@ -1,0 +1,27 @@
+meta {
+  name: Fetch
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{gatewayUrl}}/eazybank/cards/api/fetch?mobileNumber={{mobileNumber}}
+  body: none
+  auth: none
+}
+
+params:query {
+  mobileNumber: {{mobileNumber}}
+}
+
+script:post-response {
+  if (res.status === 200 && res.body && res.body.cardNumber) {
+    bru.setVar("cardNumber", res.body.cardNumber);
+    bru.setEnvVar("cardNumber", res.body.cardNumber);
+  }
+}
+
+tests {
+  test("200 OK", function() { expect(res.status).to.equal(200); });
+  test("trae cardNumber", function() { expect(res.body.cardNumber).to.be.a("string"); });
+}

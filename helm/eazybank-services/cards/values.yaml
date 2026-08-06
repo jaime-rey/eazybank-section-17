@@ -6,11 +6,11 @@ serviceName: cards
 appLabel: cards
 appName: cards
 
-replicaCount: 1
+replicaCount: 2
 
 image:
   repository: eazybytes/cards
-  tag: s14
+  tag: s17
 
 containerPort: 9000
 
@@ -22,7 +22,8 @@ service:
 appname_enabled: true
 profile_enabled: true
 config_enabled: true
-eureka_enabled: true
 resouceserver_enabled: false
 otel_enabled: true
 kafka_enabled: false
+h2_enabled: true
+h2_dbName: cardsdb

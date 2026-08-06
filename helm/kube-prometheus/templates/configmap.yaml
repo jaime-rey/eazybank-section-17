@@ -27,10 +27,6 @@ data:
         metrics_path: '/actuator/prometheus'
         static_configs:
           - targets: ['gatewayserver.default.svc.cluster.local:8072']
-      - job_name: 'eurekaserver'
-        metrics_path: '/actuator/prometheus'
-        static_configs:
-          - targets: ['eurekaserver.default.svc.cluster.local:8070']
       - job_name: 'configserver'
         metrics_path: '/actuator/prometheus'
         static_configs:

@@ -1,0 +1,28 @@
+meta {
+  name: Delete
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{gatewayUrl}}/eazybank/accounts/api/delete?mobileNumber={{mobileNumber}}
+  body: none
+  auth: bearer
+}
+
+params:query {
+  mobileNumber: {{mobileNumber}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Borra cuenta + cards + loans asociados al mobileNumber (via Feign).
+  Ejecutar al final si haras luego los folders Cards/Loans.
+}
+
+tests {
+  test("200 OK", function() { expect(res.status).to.equal(200); });
+}

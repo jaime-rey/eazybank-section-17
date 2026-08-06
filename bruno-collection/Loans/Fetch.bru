@@ -1,0 +1,27 @@
+meta {
+  name: Fetch
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{gatewayUrl}}/eazybank/loans/api/fetch?mobileNumber={{mobileNumber}}
+  body: none
+  auth: none
+}
+
+params:query {
+  mobileNumber: {{mobileNumber}}
+}
+
+script:post-response {
+  if (res.status === 200 && res.body && res.body.loanNumber) {
+    bru.setVar("loanNumber", res.body.loanNumber);
+    bru.setEnvVar("loanNumber", res.body.loanNumber);
+  }
+}
+
+tests {
+  test("200 OK", function() { expect(res.status).to.equal(200); });
+  test("trae loanNumber", function() { expect(res.body.loanNumber).to.be.a("string"); });
+}

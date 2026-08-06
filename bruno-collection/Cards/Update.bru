@@ -1,0 +1,34 @@
+meta {
+  name: Update
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{gatewayUrl}}/eazybank/cards/api/update
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "mobileNumber": "{{mobileNumber}}",
+    "cardNumber": "{{cardNumber}}",
+    "cardType": "Credit Card",
+    "totalLimit": 200000,
+    "amountUsed": 50000,
+    "availableAmount": 150000
+  }
+}
+
+docs {
+  Requiere haber corrido antes Fetch para poblar {{cardNumber}}.
+}
+
+tests {
+  test("200 OK", function() { expect(res.status).to.equal(200); });
+}

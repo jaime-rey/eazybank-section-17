@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "EazyBank s17",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

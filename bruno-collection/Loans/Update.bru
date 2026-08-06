@@ -1,0 +1,34 @@
+meta {
+  name: Update
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{gatewayUrl}}/eazybank/loans/api/update
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "mobileNumber": "{{mobileNumber}}",
+    "loanNumber": "{{loanNumber}}",
+    "loanType": "Home Loan",
+    "totalLoan": 500000,
+    "amountPaid": 100000,
+    "outstandingAmount": 400000
+  }
+}
+
+docs {
+  Requiere haber corrido antes Fetch para poblar {{loanNumber}}.
+}
+
+tests {
+  test("200 OK", function() { expect(res.status).to.equal(200); });
+}
