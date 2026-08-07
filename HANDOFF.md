@@ -117,6 +117,55 @@ Si en algún momento quieres qa realmente aislado, migrar de "FQDN" a "infra pro
 `kubectl apply -f redis.yaml -n qa` + `kubectl apply -f discovery-server.yaml -n qa`,
 y revertir las 2 líneas de `qa-env/values.yaml` a los nombres cortos.
 
+## Deploy en GKE (checkpoint 2026-08-07 — cluster BORRADO para no sangrar)
+
+**Cuenta/proyecto** (persisten): `jreycasa@gmail.com` / `project-aaa96c1a-20d1-43bf-819`.
+Region default `us-central1`.
+
+**Lo que sobrevivió al delete del cluster:**
+- Artifact Registry `us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/*`
+  con las 6 imágenes s17 pusheadas (~1.25 GB, ~$0.13/mes).
+- APIs habilitadas: container, artifactregistry, compute.
+- Overlay `helm/environments/dev-env/gke-values.yaml` (apunta a Artifact Registry
+  + `replicaCount: 1`).
+
+**Lo que se aprendió** (aplicable al recrear):
+- Con 3 nodos e2-medium (~4.5 vCPU útiles) **no cabe** el stack completo — Keycloak
+  se queda Pending por falta de CPU. **Arrancar con 4 nodos desde el principio.**
+- Cluster **Standard zonal**: control plane gratis (free tier del primer cluster).
+- kubectl necesita `gke-gcloud-auth-plugin` en PATH — viene con gcloud SDK; si
+  la terminal es nueva, hacer `set PATH=%PATH%;C:\Users\User\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin`
+  o usar PowerShell nueva.
+
+**Para recrear el cluster mañana** (cuando quieras retomar):
+```powershell
+# 1. Recrear cluster (Standard zonal, 4 nodos — el paso de 3 a 4 lo aprendimos por las malas)
+gcloud container clusters create cluster-1 `
+  --zone us-central1-a --num-nodes 4 --machine-type e2-medium `
+  --disk-size 32 --release-channel regular
+
+# 2. Conectar kubectl
+gcloud container clusters get-credentials cluster-1 --zone us-central1-a
+
+# 3. Deploy (mismo orden que ayer)
+cd "C:\Users\User\spring boot\section_17"
+kubectl apply -f redis.yaml
+kubectl apply -f h2-server.yaml
+kubectl apply -f discovery-server.yaml
+helm upgrade --install kafka helm/kafka --wait --timeout 5m
+helm upgrade --install keycloak helm/keycloak --wait --timeout 5m
+helm upgrade --install dev-env helm/environments/dev-env `
+  -f helm/environments/dev-env/gke-values.yaml --timeout 8m
+
+# 4. IP externa del gateway
+kubectl get svc gatewayserver     # columna EXTERNAL-IP -- da 1-2 min si pone <pending>
+```
+
+**Kill switch al terminar** (siempre, evitar sangría):
+```powershell
+gcloud container clusters delete cluster-1 --zone us-central1-a --quiet
+```
+
 ## Pendientes / próximos pasos posibles
 - [ ] Borrar en disco los `.tgz` de eureka sobrantes en qa/prod (el deploy los borra solo,
       pero para dejar limpio):

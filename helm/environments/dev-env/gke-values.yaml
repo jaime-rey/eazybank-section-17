@@ -1,0 +1,36 @@
+# Overlay para desplegar dev-env en GKE.
+# Uso:
+#   helm upgrade --install dev-env helm/environments/dev-env -f helm/environments/dev-env/values.yaml -f helm/environments/dev-env/gke-values.yaml
+#
+# Sobrescribe la ruta de las imagenes (Artifact Registry) y baja replicas a 1
+# para que el stack quepa en 3 nodos e2-medium (~9GB utiles).
+
+accounts:
+  image:
+    repository: us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/accounts
+  replicaCount: 1
+
+cards:
+  image:
+    repository: us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/cards
+  replicaCount: 1
+
+loans:
+  image:
+    repository: us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/loans
+  replicaCount: 1
+
+configserver:
+  image:
+    repository: us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/configserver
+  replicaCount: 1
+
+gatewayserver:
+  image:
+    repository: us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/gatewayserver
+  replicaCount: 1
+
+message:
+  image:
+    repository: us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/message
+  replicaCount: 1
