@@ -117,7 +117,10 @@ Si en algún momento quieres qa realmente aislado, migrar de "FQDN" a "infra pro
 `kubectl apply -f redis.yaml -n qa` + `kubectl apply -f discovery-server.yaml -n qa`,
 y revertir las 2 líneas de `qa-env/values.yaml` a los nombres cortos.
 
-## Deploy en GKE (probado 2026-08-07 — segunda pasada OK end-to-end)
+## Deploy en GKE (segunda pasada OK end-to-end · cluster BORRADO 2026-08-07)
+
+> **Receta operacional para recrear:** [GKE-FROM-SCRATCH.md](GKE-FROM-SCRATCH.md).
+> Esta sección conserva contexto e historia; el recipe reproducible vive allí.
 
 **Cuenta/proyecto** (persisten): `jreycasa@gmail.com` / `project-aaa96c1a-20d1-43bf-819`
 (project number `594159792471`). Region default `us-central1`.
@@ -154,29 +157,7 @@ y revertir las 2 líneas de `qa-env/values.yaml` a los nombres cortos.
   Síntoma sin el binding: pods en `ErrImagePull`; `kubectl describe` muestra
   `failed to fetch oauth token ... 403 Forbidden` en el pull.
 
-**Para recrear el cluster mañana** (cuando quieras retomar):
-```powershell
-# 1. Recrear cluster (Standard zonal, 4 nodos — el paso de 3 a 4 lo aprendimos por las malas)
-gcloud container clusters create cluster-1 `
-  --zone us-central1-a --num-nodes 4 --machine-type e2-medium `
-  --disk-size 32 --release-channel regular
-
-# 2. Conectar kubectl
-gcloud container clusters get-credentials cluster-1 --zone us-central1-a
-
-# 3. Deploy (mismo orden que ayer)
-cd "C:\Users\User\spring boot\section_17"
-kubectl apply -f redis.yaml
-kubectl apply -f h2-server.yaml
-kubectl apply -f discovery-server.yaml
-helm upgrade --install kafka helm/kafka --wait --timeout 5m
-helm upgrade --install keycloak helm/keycloak --wait --timeout 5m
-helm upgrade --install dev-env helm/environments/dev-env `
-  -f helm/environments/dev-env/gke-values.yaml --timeout 8m
-
-# 4. IP externa del gateway
-kubectl get svc gatewayserver     # columna EXTERNAL-IP -- da 1-2 min si pone <pending>
-```
+**Para recrear el cluster:** ver [GKE-FROM-SCRATCH.md](GKE-FROM-SCRATCH.md) §2.
 
 **Probado desde fuera con Bruno** (2026-08-07):
 - Env `bruno-collection/environments/Remote-GKE.bru` con las IPs públicas del LB

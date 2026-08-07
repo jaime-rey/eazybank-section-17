@@ -63,6 +63,7 @@ Deploy additional environments:
 ## Documentation
 
 - [DEPLOY-README.md](DEPLOY-README.md) — full deployment guide (local and GKE)
+- [GKE-FROM-SCRATCH.md](GKE-FROM-SCRATCH.md) — from-scratch recipe to recreate the GKE cluster
 - [HANDOFF.md](HANDOFF.md) — architecture decisions, problems solved and lessons learned
 - [bruno-collection/](bruno-collection/README.md) — end-to-end API tests (Local and Remote-GKE environments)
 
