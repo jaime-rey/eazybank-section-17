@@ -1,77 +1,71 @@
-# EazyBank — Sección 17 (Microservicios en Kubernetes)
+# EazyBank — Cloud-Native Microservices Platform
 
-Proyecto del curso **eazybytes** (Spring Boot Microservices, Section 17). Toma la
-base del curso y la extiende con un despliegue **completo, reproducible y aislado
-por entornos** en Kubernetes, tanto en **Docker Desktop** como en **GKE**.
+A 6-microservice Spring Boot banking platform deployed to Kubernetes — locally on Docker Desktop and on **Google Kubernetes Engine (GKE)** — with Helm-managed multi-environment releases (dev / qa / prod), OAuth2 security, event streaming and observability.
 
-## Qué hay dentro
+> Based on the [EazyBytes microservices course](https://github.com/eazybytes), extended with my own deployment engineering: multi-environment Helm setup with namespace isolation, GKE deployment with Artifact Registry, distributed-systems debugging and full deploy automation.
 
-Seis microservicios Spring Boot descubriéndose vía **Spring Cloud Kubernetes
-Discovery Server** (no Eureka), autenticación **OAuth2** con Keycloak, mensajería
-con **Kafka**, config externa desde un config server, rate limiting con Redis, y
-observabilidad opcional con Prometheus/Grafana/Loki/Tempo.
+## Architecture
 
 ```
-                              ┌─────────────┐
-                       ┌──────│  Keycloak   │  (OAuth2 / JWT — client credentials)
-                       │      └─────────────┘
-                       │
-  cliente HTTP  ──►  Gateway  ─────►  accounts  ┐
-                    (Spring         ─►  cards    │  ─►  H2 server (shared, JDBC TCP)
-                     Cloud          ─►  loans    ┘        └─ una BD lógica por servicio
-                     Gateway,       ─►  message   ─►  Kafka
-                     Redis rate                       (eventos comm)
-                     limiting)
-                       │
-                       └─►  configserver  ─►  git (config externa)
+                        ┌──────────────┐
+   client ─── JWT ────▶ │ gatewayserver │ ── Redis (rate limiting)
+                        └──────┬───────┘
+                               │  service discovery: Spring Cloud Kubernetes
+              ┌────────────┬───┴────────┬─────────────┐
+              ▼            ▼            ▼             ▼
+         ┌─────────┐  ┌───────┐   ┌────────┐   ┌──────────┐
+         │ accounts │  │ cards │   │ loans  │   │ message  │◀── Kafka
+         └────┬────┘  └───┬───┘   └───┬────┘   └──────────┘
+              └───────────┴───────────┘
+                          │
+                    ┌─────▼─────┐         ┌────────────┐
+                    │ H2 server │         │configserver│ ◀── git config repo
+                    └───────────┘         └────────────┘
 
-  Descubrimiento:  Spring Cloud Kubernetes Discovery Server (Role a nivel namespace)
+   Security: Keycloak (OAuth2 client-credentials, JWT validated at gateway)
+   Observability: Prometheus + Grafana
 ```
 
-## Stack
+**Services:** `configserver` · `accounts` · `cards` · `loans` · `gatewayserver` · `message`
 
-- **Java 17 + Spring Boot 3** (Cloud Gateway, Config, Kubernetes Discovery, Security OAuth2 RS)
-- **Docker + Jib** para las imágenes (`eazybytes/<svc>:s17`)
-- **Kubernetes** — Docker Desktop y GKE
-- **Helm** — chart común `eazybank-common` + 3 umbrella charts (`dev-env`, `qa-env`, `prod-env`)
-- **Kafka** (mensajería), **Keycloak** (auth), **Redis** (rate limiting)
-- **Bruno** — colección de tests end-to-end contra el gateway
+**Infrastructure:** Kafka · Keycloak · Redis · Prometheus / Grafana · Spring Cloud Kubernetes Discovery Server
 
-## Highlights del despliegue
+## Highlights
 
-- **3 entornos** paralelos (`default`, `qa`, `prod`) con puertos e infra distintos,
-  aislados vía RBAC de namespace en el discovery server (Role, no ClusterRole).
-- **Split-brain de H2 resuelto**: manifiesto `h2-server.yaml` corre 1 H2 aparte;
-  cada servicio se conecta a su propia BD lógica en él. Evita que con `replicas > 1`
-  cada pod tenga su propio H2 en memoria.
-- **Deploy en GKE** con overlay `gke-values.yaml` apuntando a Artifact Registry
-  regional. Un `gcloud artifacts repositories add-iam-policy-binding` (una sola
-  vez) resuelve el 403 típico de pull sin recrear el node pool.
-- Todo consolidado en los charts — sin parches manuales tras `helm install`.
+- **Multi-environment Helm setup** — three parallel releases (dev/qa/prod) with per-namespace isolation, environment-specific values, and a reusable discovery-server manifest using namespace-scoped RBAC (`Role`, not `ClusterRole`).
+- **GKE deployment** — images built with Jib, pushed to Artifact Registry, pulled by GKE nodes via IAM binding on the repository. Validated end-to-end from outside the cluster (token → create → fetch → delete) with Bruno.
+- **Real debugging stories** — documented in [HANDOFF.md](HANDOFF.md), including a split-brain caused by per-pod in-memory H2 databases behind a round-robin Service (fixed with a shared H2 server and env-injected datasource URLs), Keycloak OOMKills, and Artifact Registry `403 ImagePull` IAM issues.
+- **One-command automation** — PowerShell scripts to build all images, deploy the full cluster, deploy additional environments, and tear everything down.
 
-## Arrancar
-
-**Local (Docker Desktop con Kubernetes habilitado):**
+## Quick start (Docker Desktop Kubernetes)
 
 ```powershell
-.\build-images-s17.ps1   # 6 imágenes con Jib
-.\deploy-cluster.ps1     # infra + microservicios
+# Build the 6 service images
+.\build-images-s17.ps1
+
+# Deploy infra + dev environment
+.\deploy-cluster.ps1
+
+# Health check
 curl.exe http://localhost:8072/actuator/health
+
+# Tear down
+.\teardown-cluster.ps1
 ```
 
-Detalle completo → [`DEPLOY-README.md`](DEPLOY-README.md).
+Deploy additional environments:
 
-**GKE (público):** ver la sección "Deploy en GKE" en
-[`HANDOFF.md`](HANDOFF.md) — cluster + IAM + deploy + Bruno.
+```powershell
+.\deploy-env.ps1 -Env qa-env   -Release eazybank-qa   -Namespace qa
+.\deploy-env.ps1 -Env prod-env -Release eazybank-prod -Namespace prod
+```
 
-**Probar los endpoints:** colección en [`bruno-collection/`](bruno-collection/README.md)
-con envs `Local` y `Remote-GKE`.
+## Documentation
 
-## Documentación
+- [DEPLOY-README.md](DEPLOY-README.md) — full deployment guide (local and GKE)
+- [HANDOFF.md](HANDOFF.md) — architecture decisions, problems solved and lessons learned
+- [bruno-collection/](bruno-collection/README.md) — end-to-end API tests (Local and Remote-GKE environments)
 
-- [`DEPLOY-README.md`](DEPLOY-README.md) — guía de despliegue local paso a paso.
-- [`HANDOFF.md`](HANDOFF.md) — arquitectura detallada, problemas encontrados y
-  cómo se resolvieron (Eureka → Discovery Server, split-brain H2, ImagePull 403
-  en GKE, etc.), tres entornos, y receta reproducible para GKE.
-- [`bruno-collection/README.md`](bruno-collection/README.md) — cómo probar los
-  endpoints con Bruno (una request a una, o runner data-driven con 5 clientes).
+## Tech stack
+
+Java · Spring Boot · Spring Cloud Kubernetes · Docker · Kubernetes · Helm · GKE · Jib · Kafka · Keycloak (OAuth2/JWT) · Redis · Prometheus · Grafana · H2 · Bruno
