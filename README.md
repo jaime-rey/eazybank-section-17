@@ -1,5 +1,7 @@
 # EazyBank — Cloud-Native Microservices Platform
 
+[![CI](https://github.com/jaime-rey/eazybank-section-17/actions/workflows/ci.yml/badge.svg)](https://github.com/jaime-rey/eazybank-section-17/actions/workflows/ci.yml)
+
 A 6-microservice Spring Boot banking platform deployed to Kubernetes — locally on Docker Desktop and on **Google Kubernetes Engine (GKE)** — with Helm-managed multi-environment releases (dev / qa / prod), OAuth2 security, event streaming and observability.
 
 > Based on the [EazyBytes microservices course](https://github.com/eazybytes), extended with my own deployment engineering: multi-environment Helm setup with namespace isolation, GKE deployment with Artifact Registry, distributed-systems debugging and full deploy automation.
