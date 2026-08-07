@@ -1,25 +1,37 @@
 # EazyBank s17 — Bruno collection
 
-Colección de pruebas para el cluster local. Contra `dev-env` (gateway en `localhost:8072`)
-y Keycloak en `localhost:80`.
+Colección de pruebas contra el gateway. Dos entornos:
+
+- **Local**: cluster de Docker Desktop (gateway `localhost:8072`, Keycloak `localhost:80`).
+- **Remote-GKE**: cluster de GKE con LoadBalancer public IPs (ver `HANDOFF.md` §"Deploy en GKE").
 
 ## Requisitos previos
 
-1. Cluster levantado: `.\deploy-cluster.ps1` desde la raíz del proyecto.
-2. Cliente OAuth `eazybank-callcenter-cc` creado en Keycloak con roles `ACCOUNTS,CARDS,LOANS`:
+1. Cluster levantado. Para local: `.\deploy-cluster.ps1`. Para GKE: seguir la receta
+   del `HANDOFF.md` (arrancar cluster + `kubectl apply` de infra + `helm install`).
+2. Cliente OAuth `eazybank-callcenter-cc` creado en el Keycloak del cluster que vayas
+   a usar (Keycloak corre H2 en memoria — al recrear el cluster hay que rehacerlo):
    ```powershell
    .\create-keycloak-client.ps1 -ClientId eazybank-callcenter-cc -Roles ACCOUNTS,CARDS,LOANS
    ```
-   El script imprime el `secret` — cópialo.
+   El script hace `kubectl exec` al pod de keycloak, así que respeta el contexto de
+   `kubectl` — funciona igual contra Docker Desktop o GKE. Imprime el `secret`.
 3. Bruno instalado: https://www.usebruno.com/
 
 ## Configurar
 
 1. Abre Bruno → **Open Collection** → selecciona esta carpeta `bruno-collection`.
-2. Panel de environments (arriba a la derecha) → selecciona **Local**.
-3. Edita el env `Local` (icono lápiz) y **pega el `clientSecret` que devolvió el script**
-   (el fichero trae `PASTE_HERE_FROM_create-keycloak-client.ps1` como placeholder — no
-   se commitea el valor real). El `token` se rellena solo cuando corras `Auth/Get Token`.
+2. Panel de environments (arriba a la derecha) → **Local** o **Remote-GKE**.
+3. Edita el env (icono lápiz) y **pega el `clientSecret` que devolvió el script**
+   (los ficheros traen `PASTE_HERE_FROM_create-keycloak-client.ps1` como placeholder —
+   no se commitea el valor real). El `token` se rellena solo cuando corras
+   `Auth/Get Token`.
+4. Para **Remote-GKE**, verifica que las IPs del env coinciden con las actuales:
+   ```powershell
+   kubectl get svc gatewayserver keycloak
+   ```
+   Si cambian (por recrear el cluster), actualiza `gatewayUrl` y `keycloakUrl` en el env.
+   Los puertos son: gateway `:8072`, keycloak `:80`.
 
 ## Cómo usar
 

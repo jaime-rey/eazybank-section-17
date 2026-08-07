@@ -117,14 +117,17 @@ Si en algún momento quieres qa realmente aislado, migrar de "FQDN" a "infra pro
 `kubectl apply -f redis.yaml -n qa` + `kubectl apply -f discovery-server.yaml -n qa`,
 y revertir las 2 líneas de `qa-env/values.yaml` a los nombres cortos.
 
-## Deploy en GKE (checkpoint 2026-08-07 — cluster BORRADO para no sangrar)
+## Deploy en GKE (probado 2026-08-07 — segunda pasada OK end-to-end)
 
-**Cuenta/proyecto** (persisten): `jreycasa@gmail.com` / `project-aaa96c1a-20d1-43bf-819`.
-Region default `us-central1`.
+**Cuenta/proyecto** (persisten): `jreycasa@gmail.com` / `project-aaa96c1a-20d1-43bf-819`
+(project number `594159792471`). Region default `us-central1`.
 
 **Lo que sobrevivió al delete del cluster:**
 - Artifact Registry `us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/*`
   con las 6 imágenes s17 pusheadas (~1.25 GB, ~$0.13/mes).
+- **IAM binding en el repo `eazybank`**: `roles/artifactregistry.reader` para
+  `594159792471-compute@developer.gserviceaccount.com` (la default compute SA que
+  usan los nodos GKE). Persiste al borrar el cluster porque vive en el repo, no en él.
 - APIs habilitadas: container, artifactregistry, compute.
 - Overlay `helm/environments/dev-env/gke-values.yaml` (apunta a Artifact Registry
   + `replicaCount: 1`).
@@ -136,6 +139,20 @@ Region default `us-central1`.
 - kubectl necesita `gke-gcloud-auth-plugin` en PATH — viene con gcloud SDK; si
   la terminal es nueva, hacer `set PATH=%PATH%;C:\Users\User\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin`
   o usar PowerShell nueva.
+- **ImagePull 403 al Artifact Registry**: los oauth scopes por defecto del node pool
+  (`devstorage.read_only`) **sí sirven** para pulls desde AR — no hace falta recrear
+  el pool con `cloud-platform`. Lo que falta por defecto es el IAM: la default compute
+  SA (`<project-number>-compute@developer.gserviceaccount.com`) necesita
+  `roles/artifactregistry.reader` sobre el repo. Fix (una sola vez por proyecto,
+  ya aplicado y persistente):
+  ```powershell
+  gcloud artifacts repositories add-iam-policy-binding eazybank `
+    --location=us-central1 `
+    --member=serviceAccount:594159792471-compute@developer.gserviceaccount.com `
+    --role=roles/artifactregistry.reader
+  ```
+  Síntoma sin el binding: pods en `ErrImagePull`; `kubectl describe` muestra
+  `failed to fetch oauth token ... 403 Forbidden` en el pull.
 
 **Para recrear el cluster mañana** (cuando quieras retomar):
 ```powershell
@@ -161,10 +178,32 @@ helm upgrade --install dev-env helm/environments/dev-env `
 kubectl get svc gatewayserver     # columna EXTERNAL-IP -- da 1-2 min si pone <pending>
 ```
 
+**Probado desde fuera con Bruno** (2026-08-07):
+- Env `bruno-collection/environments/Remote-GKE.bru` con las IPs públicas del LB
+  (`gatewayUrl: http://<gw-ip>:8072`, `keycloakUrl: http://<kc-ip>`). Las IPs
+  las reasigna GCP a cada recreación del cluster — actualizar el env con:
+  ```powershell
+  kubectl get svc gatewayserver keycloak
+  ```
+- Cliente Keycloak `eazybank-callcenter-cc` se crea igual que en local con
+  `.\create-keycloak-client.ps1 -ClientId eazybank-callcenter-cc -Roles ACCOUNTS,CARDS,LOANS`.
+  El script hace `kubectl exec` al pod → respeta el kubecontext actual (funciona
+  contra GKE sin cambios). Copiar el secret que imprime y pegarlo en el env de Bruno.
+- No hay mismatch de `iss` en JWT: el gateway solo tiene `jwk-set-uri` (no
+  `issuer-uri`), y ese apunta al service interno de keycloak (`keycloak.default.svc...`).
+  El token puede tener cualquier `iss` mientras esté firmado por la misma clave —
+  por eso vale hacer login contra la IP pública del keycloak.
+- Flujo validado end-to-end: `Auth/Get Token` (200) → `Accounts/Create` (201) →
+  `Accounts/Fetch` (200 con branchAddress del config server) → `Accounts/Delete` (200).
+- Keycloak sigue con H2 en memoria: si el pod reinicia, se pierden clientes/roles
+  y hay que re-ejecutar `create-keycloak-client.ps1`.
+
 **Kill switch al terminar** (siempre, evitar sangría):
 ```powershell
 gcloud container clusters delete cluster-1 --zone us-central1-a --quiet
 ```
+Sobreviven al delete: repo Artifact Registry con las imágenes, el IAM binding del
+repo, y las APIs habilitadas. La próxima recreación se salta el debug del 403.
 
 ## Pendientes / próximos pasos posibles
 - [ ] Borrar en disco los `.tgz` de eureka sobrantes en qa/prod (el deploy los borra solo,
