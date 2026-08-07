@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual GKE — EazyBank Section 17</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-soft: rgba(56,189,248,0.12);
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    --cost: #a78bfa;
+    --border: #334155;
+    --code-bg: #0b1220;
+    --code-text: #e2e8f0;
+    --shell-prompt: #4ade80;
+    --shell-comment: #64748b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  header.hero {
+    padding: 40px 32px 32px;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  header.hero h1 {
+    margin: 0 0 6px;
+    font-size: 32px;
+    letter-spacing: -0.5px;
+  }
+  header.hero .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 18px;
+  }
+  header.hero .meta {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  header.hero .meta span {
+    background: rgba(255,255,255,0.05);
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  aside.toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 28px 20px;
+    border-right: 1px solid var(--border);
+    font-size: 14px;
+  }
+  aside.toc h3 {
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin: 0 0 12px;
+  }
+  aside.toc ol {
+    padding-left: 20px;
+    margin: 0;
+  }
+  aside.toc li {
+    margin: 6px 0;
+  }
+  aside.toc a {
+    color: var(--text);
+    text-decoration: none;
+    display: block;
+    padding: 3px 0;
+  }
+  aside.toc a:hover { color: var(--accent); }
+  main {
+    padding: 32px 40px 80px;
+    min-width: 0;
+  }
+  section {
+    margin-bottom: 40px;
+    padding-top: 20px;
+  }
+  section > h2 {
+    margin: 0 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent);
+    color: var(--accent);
+    font-size: 22px;
+    letter-spacing: -0.3px;
+  }
+  section > h2 .num {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--bg);
+    font-size: 13px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    margin-right: 10px;
+    font-weight: 700;
+    vertical-align: middle;
+  }
+  h3 {
+    color: var(--text);
+    margin: 24px 0 8px;
+    font-size: 17px;
+  }
+  p { margin: 8px 0; }
+  a { color: var(--accent); }
+  code {
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: "Cascadia Code", "JetBrains Mono", Consolas, "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--code-text);
+    margin: 12px 0;
+    position: relative;
+  }
+  pre code { background: none; padding: 0; color: inherit; }
+  pre .cmt { color: var(--shell-comment); }
+  pre .kw { color: var(--accent); }
+  pre .str { color: var(--ok); }
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 16px 0;
+  }
+  .callout.warn { border-color: var(--warn); background: rgba(251,191,36,0.10); }
+  .callout.danger { border-color: var(--danger); background: rgba(248,113,113,0.10); }
+  .callout.cost { border-color: var(--cost); background: rgba(167,139,250,0.10); }
+  .callout .label {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-right: 8px;
+    color: var(--accent);
+  }
+  .callout.warn .label { color: var(--warn); }
+  .callout.danger .label { color: var(--danger); }
+  .callout.cost .label { color: var(--cost); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--panel);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+  .badge {
+    display: inline-block;
+    background: var(--panel-2);
+    color: var(--text);
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 6px;
+  }
+  .badge.persist { background: rgba(74,222,128,0.20); color: var(--ok); }
+  .badge.ephemeral { background: rgba(251,191,36,0.20); color: var(--warn); }
+  footer {
+    text-align: center;
+    padding: 30px 0;
+    color: var(--muted);
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 40px auto 0;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    aside.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  }
+  @media print {
+    body { background: white; color: black; font-size: 11pt; }
+    header.hero { background: none; color: black; border-bottom: 2px solid #000; }
+    aside.toc { display: none; }
+    .layout { display: block; }
+    main { padding: 20px; }
+    pre { background: #f4f4f4; color: #000; page-break-inside: avoid; border: 1px solid #ccc; }
+    code { background: #f4f4f4; color: #000; }
+    .callout { border: 1px solid #999; background: #f9f9f9; page-break-inside: avoid; }
+    section { page-break-inside: avoid; }
+    a { color: #000; text-decoration: underline; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>Manual GKE — EazyBank Section 17</h1>
+  <div class="subtitle">Cómo montar el cluster completo en Google Kubernetes Engine desde un proyecto vacío. Recipe personal.</div>
+  <div class="meta">
+    <span>Proyecto: <code>project-aaa96c1a-20d1-43bf-819</code></span>
+    <span>Region: <code>us-central1</code></span>
+    <span>Zona: <code>us-central1-a</code></span>
+    <span>Última recreación validada: 2026-08-07</span>
+  </div>
+</header>
+
+<div class="layout">
+
+<aside class="toc">
+  <h3>Contenido</h3>
+  <ol>
+    <li><a href="#s0">Prereqs de la máquina</a></li>
+    <li><a href="#s1">Login GCP</a></li>
+    <li><a href="#s2">Habilitar APIs</a></li>
+    <li><a href="#s3">Crear repo Artifact Registry</a></li>
+    <li><a href="#s4">Build + push imágenes</a></li>
+    <li><a href="#s5">IAM binding</a></li>
+    <li><a href="#s6">Crear cluster GKE</a></li>
+    <li><a href="#s7">Deploy infra</a></li>
+    <li><a href="#s8">Deploy microservicios</a></li>
+    <li><a href="#s9">Validar end-to-end</a></li>
+    <li><a href="#s10">Kill switch</a></li>
+    <li><a href="#s11">Troubleshooting</a></li>
+    <li><a href="#s12">Coste</a></li>
+  </ol>
+</aside>
+
+<main>
+
+<section>
+  <p>
+    Doc autocontenido para volver a montar el cluster en meses sin recordar nada.
+    Asume que se parte de un <strong>proyecto GCP vacío</strong> (sin repo, sin
+    imágenes, sin nada) y termina con un cluster GKE corriendo los 6 microservicios
+    y validado desde fuera con Bruno.
+  </p>
+  <div class="callout">
+    <span class="label">Al día</span> El repo de EazyBank Section 17 debe estar
+    clonado localmente en <code>C:\Users\User\spring boot\section_17</code>. Todos
+    los comandos se ejecutan desde ahí en PowerShell.
+  </div>
+  <div class="callout cost">
+    <span class="label">Coste actual</span> Todo borrado el 2026-08-07. Estado <strong>$0/mes</strong>.
+    Ver §12 para el desglose al recrear.
+  </div>
+</section>
+
+<section id="s0">
+  <h2><span class="num">0</span>Prereqs de la máquina</h2>
+  <ul>
+    <li><strong>Google Cloud SDK</strong> (<code>gcloud</code> + <code>gke-gcloud-auth-plugin</code>). Windows: instalador oficial.</li>
+    <li><strong>kubectl</strong> — <code>gcloud components install kubectl</code> o el que viene con Docker Desktop.</li>
+    <li><strong>helm</strong> v3+.</li>
+    <li><strong>Docker Desktop</strong> — necesario para el build+push de imágenes en §4.</li>
+    <li><strong>JDK 17+</strong> — para el build de Jib.</li>
+  </ul>
+  <div class="callout warn">
+    <span class="label">Warning</span> Si <code>kubectl</code> se queja de
+    <code>gke-gcloud-auth-plugin not found</code>, el plugin no está en el PATH.
+    Añádelo en la sesión con:
+    <pre><code>$env:PATH += ";C:\Users\User\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin"</code></pre>
+    o abre una PowerShell nueva.
+  </div>
+</section>
+
+<section id="s1">
+  <h2><span class="num">1</span>Login en GCP y configurar el proyecto</h2>
+<pre><code><span class="kw">gcloud</span> auth login
+<span class="kw">gcloud</span> config set project project-aaa96c1a-20d1-43bf-819
+<span class="kw">gcloud</span> config set compute/region us-central1
+<span class="kw">gcloud</span> config set compute/zone us-central1-a</code></pre>
+  <p>El <code>gcloud auth login</code> abre el navegador para OAuth. Una sola vez por máquina/cuenta.</p>
+</section>
+
+<section id="s2">
+  <h2><span class="num">2</span>Habilitar APIs <span class="badge persist">persiste</span></h2>
+  <p>Habilita tres APIs. Si ya están enabled, este comando es idempotente y no cobra nada.</p>
+<pre><code><span class="kw">gcloud</span> services enable container.googleapis.com artifactregistry.googleapis.com compute.googleapis.com</code></pre>
+  <p>Comprobar:</p>
+<pre><code><span class="kw">gcloud</span> services list --enabled --filter=<span class="str">"name:(container.googleapis.com OR artifactregistry.googleapis.com OR compute.googleapis.com)"</span> --format=<span class="str">"value(config.name)"</span></code></pre>
+</section>
+
+<section id="s3">
+  <h2><span class="num">3</span>Crear el repo de Artifact Registry <span class="badge ephemeral">borrado 2026-08-07</span></h2>
+<pre><code><span class="kw">gcloud</span> artifacts repositories create eazybank <span class="cmt">`</span>
+  --repository-format=docker --location=us-central1 <span class="cmt">`</span>
+  --description=<span class="str">"EazyBank microservices Docker images"</span></code></pre>
+  <p>El repo cuesta ~$0.06/mes por las imágenes que contendrá (~630 MB). Ver §12.</p>
+</section>
+
+<section id="s4">
+  <h2><span class="num">4</span>Build local + push al Artifact Registry</h2>
+  <p>Configura Docker para autenticar contra AR (una sola vez por máquina):</p>
+<pre><code><span class="kw">gcloud</span> auth configure-docker us-central1-docker.pkg.dev</code></pre>
+  <p>Build de las 6 imágenes con Jib (produce tags <code>eazybytes/&lt;svc&gt;:s17</code>):</p>
+<pre><code><span class="kw">cd</span> <span class="str">"C:\Users\User\spring boot\section_17"</span>
+.\build-images-s17.ps1</code></pre>
+  <p>Retag y push:</p>
+<pre><code><span class="kw">$svcs</span> = <span class="kw">@</span>(<span class="str">"configserver"</span>,<span class="str">"accounts"</span>,<span class="str">"cards"</span>,<span class="str">"loans"</span>,<span class="str">"gatewayserver"</span>,<span class="str">"message"</span>)
+<span class="kw">foreach</span> (<span class="kw">$s</span> <span class="kw">in</span> <span class="kw">$svcs</span>) {
+    <span class="kw">$dst</span> = <span class="str">"us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/${s}:s17"</span>
+    <span class="kw">docker</span> tag <span class="str">"eazybytes/${s}:s17"</span> <span class="kw">$dst</span>
+    <span class="kw">docker</span> push <span class="kw">$dst</span>
+}</code></pre>
+  <p>Comprobar que están las 6:</p>
+<pre><code><span class="kw">gcloud</span> artifacts docker images list us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank --format=<span class="str">"value(package)"</span></code></pre>
+</section>
+
+<section id="s5">
+  <h2><span class="num">5</span>IAM binding para que los nodos GKE puedan pull <span class="badge persist">persiste</span></h2>
+  <div class="callout danger">
+    <span class="label">Crítico</span> Sin esto, los pods se quedan en
+    <code>ErrImagePull</code> con <code>403 Forbidden</code>. Los oauth scopes
+    default del node pool (<code>devstorage.read_only</code>) <strong>sí</strong> sirven para
+    Artifact Registry — solo falta el IAM.
+  </div>
+<pre><code><span class="kw">gcloud</span> artifacts repositories add-iam-policy-binding eazybank <span class="cmt">`</span>
+  --location=us-central1 <span class="cmt">`</span>
+  --member=serviceAccount:594159792471-compute@developer.gserviceaccount.com <span class="cmt">`</span>
+  --role=roles/artifactregistry.reader</code></pre>
+  <p>Es idempotente. Si el binding ya existe (persistió de una sesión anterior), no da error.</p>
+</section>
+
+<section id="s6">
+  <h2><span class="num">6</span>Crear el cluster GKE</h2>
+  <div class="callout warn">
+    <span class="label">Tamaño</span> Con <strong>3</strong> nodos e2-medium (~4.5 vCPU útiles) no cabe el stack
+    completo — Keycloak se queda Pending. Arrancar con <strong>4 nodos</strong>.
+  </div>
+<pre><code><span class="kw">gcloud</span> container clusters create cluster-1 <span class="cmt">`</span>
+  --zone us-central1-a --num-nodes 4 --machine-type e2-medium <span class="cmt">`</span>
+  --disk-size 32 --release-channel regular</code></pre>
+  <p>Tarda ~3-5 min. Al terminar, conectar kubectl:</p>
+<pre><code><span class="kw">gcloud</span> container clusters get-credentials cluster-1 --zone us-central1-a
+<span class="kw">kubectl</span> get nodes    <span class="cmt"># deben salir 4 Ready</span></code></pre>
+</section>
+
+<section id="s7">
+  <h2><span class="num">7</span>Deploy de la infra base</h2>
+  <p>Los tres primeros son manifiestos sueltos, independientes entre sí:</p>
+<pre><code><span class="kw">kubectl</span> apply -f redis.yaml
+<span class="kw">kubectl</span> apply -f h2-server.yaml
+<span class="kw">kubectl</span> apply -f discovery-server.yaml</code></pre>
+  <p>Kafka y Keycloak vía Helm (cada uno <code>--wait</code>):</p>
+<pre><code><span class="kw">helm</span> upgrade --install kafka helm/kafka --wait --timeout 5m
+<span class="kw">helm</span> upgrade --install keycloak helm/keycloak --wait --timeout 5m</code></pre>
+</section>
+
+<section id="s8">
+  <h2><span class="num">8</span>Deploy de los 6 microservicios</h2>
+  <p>El overlay <code>gke-values.yaml</code> apunta a las rutas de Artifact Registry y baja replicas a 1:</p>
+<pre><code><span class="kw">helm</span> upgrade --install dev-env helm/environments/dev-env <span class="cmt">`</span>
+  -f helm/environments/dev-env/gke-values.yaml --timeout 8m</code></pre>
+  <p>Comprobar pods y el LoadBalancer del gateway:</p>
+<pre><code><span class="kw">kubectl</span> get pods
+<span class="kw">kubectl</span> get svc gatewayserver keycloak</code></pre>
+  <p>La <code>EXTERNAL-IP</code> del gateway y de keycloak tarda 1-2 min en asignarse.</p>
+</section>
+
+<section id="s9">
+  <h2><span class="num">9</span>Validar end-to-end (Bruno)</h2>
+  <p>Keycloak corre H2 en memoria — cada recreación pierde clientes y roles:</p>
+<pre><code>.\create-keycloak-client.ps1 -ClientId eazybank-callcenter-cc -Roles ACCOUNTS,CARDS,LOANS
+<span class="cmt"># copiar el `secret` que imprime</span></code></pre>
+  <p>En Bruno (colección <code>bruno-collection/</code>):</p>
+  <ol>
+    <li>Env <strong>Remote-GKE</strong> → actualizar <code>gatewayUrl</code> y <code>keycloakUrl</code> con las EXTERNAL-IP actuales.</li>
+    <li>Pegar el <code>clientSecret</code>.</li>
+    <li>Correr <code>Auth/Get Token</code> → <code>Accounts/Create</code> → <code>Accounts/Fetch</code> → <code>Accounts/Delete</code>. Deben devolver 200/201.</li>
+  </ol>
+  <div class="callout">
+    <span class="label">JWT issuer</span> El gateway solo tiene <code>jwk-set-uri</code>
+    (no <code>issuer-uri</code>) → no valida el <code>iss</code>. Vale hacer login
+    contra la IP pública de Keycloak aunque los JWK los lea internamente.
+  </div>
+</section>
+
+<section id="s10">
+  <h2><span class="num">10</span>Kill switch al terminar</h2>
+  <p>SIEMPRE al terminar. Dos niveles según cuánto vayas a tardar en volver.</p>
+
+  <h3>Nivel A — pausa (vuelves en días/semanas)</h3>
+  <p>Solo borra el cluster y los disks huérfanos de PVCs. Se mantiene el repo AR con las imágenes → coste ~$0.06/mes → al recrear te saltas §3 y §4.</p>
+<pre><code><span class="kw">gcloud</span> container clusters delete cluster-1 --zone us-central1-a --quiet
+
+<span class="cmt"># Los disks de PVCs (Kafka/Keycloak) NO se borran automaticamente:</span>
+<span class="kw">gcloud</span> compute disks list --format=<span class="str">"value(name,zone)"</span>
+<span class="cmt"># Y para cada uno:</span>
+<span class="kw">gcloud</span> compute disks delete <span class="str">&lt;PVC-NAME&gt;</span> --zone=us-central1-a --quiet</code></pre>
+
+  <h3>Nivel B — coste $0 (vuelves en meses o quizá nunca)</h3>
+  <p>Además del Nivel A, borra también el repo AR (con todas las imágenes dentro):</p>
+<pre><code><span class="kw">gcloud</span> artifacts repositories delete eazybank --location=us-central1 --quiet</code></pre>
+  <div class="callout warn">
+    <span class="label">Persiste</span> Nivel B deja APIs habilitadas (gratis) y
+    el IAM binding huérfano — inofensivo. La próxima recreación tiene que ejecutar
+    §3, §4 y §5 de nuevo.
+  </div>
+
+  <h3>Verificar coste $0</h3>
+<pre><code><span class="kw">gcloud</span> container clusters list
+<span class="kw">gcloud</span> compute disks list
+<span class="kw">gcloud</span> compute addresses list
+<span class="kw">gcloud</span> compute forwarding-rules list
+<span class="kw">gcloud</span> artifacts repositories list --location=us-central1</code></pre>
+  <p>Todo debe salir vacío. Si aparece algo — bórralo.</p>
+</section>
+
+<section id="s11">
+  <h2><span class="num">11</span>Troubleshooting rápido</h2>
+  <table>
+    <thead>
+      <tr><th>Síntoma</th><th>Causa</th><th>Fix</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Pods en <code>ErrImagePull</code>; <code>describe</code> muestra <code>403 fetch oauth token</code></td>
+        <td>Falta IAM binding en la compute SA</td>
+        <td>Aplicar §5. El binding es idempotente</td>
+      </tr>
+      <tr>
+        <td><code>kubectl</code>: <code>gke-gcloud-auth-plugin not found</code></td>
+        <td>Plugin no en PATH</td>
+        <td>Ver §0 (extend <code>$env:PATH</code>) o PowerShell nueva</td>
+      </tr>
+      <tr>
+        <td>Keycloak en <code>Pending</code> indefinidamente</td>
+        <td>Cluster con 3 nodos e2-medium — no cabe</td>
+        <td>Recrear con <code>--num-nodes 4</code></td>
+      </tr>
+      <tr>
+        <td>Gateway <code>EXTERNAL-IP: &lt;pending&gt;</code> más de 5 min</td>
+        <td>LB de GCP tardando o cuota agotada</td>
+        <td>Esperar. Cuota: <code>gcloud compute forwarding-rules list</code></td>
+      </tr>
+      <tr>
+        <td>Bruno 401 en Accounts</td>
+        <td>Token expiró (~1 min) o Keycloak reinició (H2 en memoria)</td>
+        <td>Re-<code>Auth/Get Token</code>. Si sigue: re-ejecutar <code>create-keycloak-client.ps1</code></td>
+      </tr>
+      <tr>
+        <td>Trazas de OpenTelemetry fallando a <code>tempo</code></td>
+        <td>No hay observabilidad desplegada</td>
+        <td>Ignorar — ruido inofensivo</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s12">
+  <h2><span class="num">12</span>Coste aproximado</h2>
+  <table>
+    <thead>
+      <tr><th>Recurso</th><th>Tarifa</th><th>Coste</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Cluster corriendo (4× e2-medium)</td>
+        <td>~$0.03/h por nodo (standard)</td>
+        <td><strong>~$0.10/h</strong></td>
+      </tr>
+      <tr>
+        <td>Control plane (zonal)</td>
+        <td>Gratis (free tier del primer cluster)</td>
+        <td>$0</td>
+      </tr>
+      <tr>
+        <td>Load Balancers</td>
+        <td>Gratis las primeras 5 forwarding rules</td>
+        <td>$0</td>
+      </tr>
+      <tr>
+        <td>Disks PVCs (Kafka/Keycloak)</td>
+        <td>$0.10/GB/mes pd-balanced</td>
+        <td>~$0.20/mes (persisten al borrar cluster — bórralos)</td>
+      </tr>
+      <tr>
+        <td>Artifact Registry (630 MB con las 6 imágenes)</td>
+        <td>$0.10/GB/mes</td>
+        <td><strong>~$0.06/mes</strong></td>
+      </tr>
+      <tr>
+        <td>APIs habilitadas, IAM bindings</td>
+        <td>Gratis</td>
+        <td>$0</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout cost">
+    <span class="label">Regla</span> Si no lo estás usando ahora mismo, aplica el
+    kill switch. Nivel A si vuelves en días. Nivel B si vuelves en meses (o quizá
+    nunca) para bajar a <strong>$0/mes absoluto</strong>.
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer>
+  Manual GKE — EazyBank Section 17 · Complementa <code>GKE-FROM-SCRATCH.md</code> y <code>HANDOFF.md</code>
+</footer>
+
+</body>
+</html>

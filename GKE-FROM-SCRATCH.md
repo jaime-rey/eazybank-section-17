@@ -38,10 +38,11 @@ gcloud config set compute/region us-central1
 gcloud config set compute/zone us-central1-a
 ```
 
-## §1 Setup one-time (comprueba primero — probablemente ya está)
+## §1 Setup one-time (estado 2026-08-07: TODO borrado, hay que rehacerlo)
 
-Estas cuatro cosas **sobreviven** al borrado del cluster. Comprueba en orden
-antes de recrear nada:
+Estas cuatro cosas **pueden** sobrevivir al borrado del cluster. Última vez
+(2026-08-07) se borró todo — repo AR incluido — para llegar a coste $0.
+Comprueba en orden antes de recrear nada:
 
 ```powershell
 # 1. APIs habilitadas
@@ -152,12 +153,28 @@ En Bruno (colección `bruno-collection/`):
 
 ### Kill switch (SIEMPRE al terminar — evita sangría de coste)
 
+Dos niveles según cuánto vayas a tardar en volver:
+
+**Nivel A — pausa (vuelves en días/semanas):** solo borra el cluster y disks huérfanos.
+Se mantiene el repo AR con las imágenes (coste ~$0.06/mes) para saltarse §1c al recrear.
+
 ```powershell
 gcloud container clusters delete cluster-1 --zone us-central1-a --quiet
+
+# Los disks de PVCs (Kafka/Keycloak) NO se borran con el cluster — huerfanos:
+gcloud compute disks list --format="value(name,zone)"
+# Borra los que aparezcan (cambia el nombre):
+# gcloud compute disks delete <PVC-NAME> --zone=us-central1-a --quiet
 ```
 
-Persiste tras el delete: repo AR, imágenes, IAM binding, APIs. La próxima
-recreación se salta §1.
+**Nivel B — coste $0 (vuelves en meses o quizá nunca):** borra también el repo AR.
+
+```powershell
+gcloud artifacts repositories delete eazybank --location=us-central1 --quiet
+```
+
+Persiste tras Nivel B: APIs habilitadas (gratis), IAM binding (huérfano — inofensivo).
+La próxima recreación tiene que ejecutar §1 entero (crear repo AR + build + push).
 
 ## §3 Troubleshooting rápido
 
