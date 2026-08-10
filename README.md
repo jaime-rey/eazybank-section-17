@@ -38,6 +38,7 @@ A 6-microservice Spring Boot banking platform deployed to Kubernetes — locally
 - **GKE deployment** — images built with Jib, pushed to Artifact Registry, pulled by GKE nodes via IAM binding on the repository. Validated end-to-end from outside the cluster (token → create → fetch → delete) with Bruno.
 - **Real debugging stories** — documented in [HANDOFF.md](HANDOFF.md), including a split-brain caused by per-pod in-memory H2 databases behind a round-robin Service (fixed with a shared H2 server and env-injected datasource URLs), Keycloak OOMKills, and Artifact Registry `403 ImagePull` IAM issues.
 - **One-command automation** — PowerShell scripts to build all images, deploy the full cluster, deploy additional environments, and tear everything down.
+- **Integration tests with Testcontainers** — `accounts` spins up a real **MySQL 8.4** in Docker during CI (via `@ServiceConnection`), validating the production `schema.sql` and JPA layer against the real database engine, not H2 in compatibility mode. See [`AccountsRepositoryIT`](accounts/src/test/java/com/eazybytes/accounts/AccountsRepositoryIT.java).
 
 ## Quick start (Docker Desktop Kubernetes)
 
@@ -72,4 +73,4 @@ Deploy additional environments:
 
 ## Tech stack
 
-Java · Spring Boot · Spring Cloud Kubernetes · Docker · Kubernetes · Helm · GKE · Jib · Kafka · Keycloak (OAuth2/JWT) · Redis · Prometheus · Grafana · H2 · Bruno
+Java · Spring Boot · Spring Cloud Kubernetes · Docker · Kubernetes · Helm · GKE · Jib · Kafka · Keycloak (OAuth2/JWT) · Redis · Prometheus · Grafana · H2 · MySQL · Testcontainers · JUnit 5 · Bruno · GitHub Actions
