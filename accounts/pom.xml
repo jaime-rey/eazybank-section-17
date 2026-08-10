@@ -31,7 +31,7 @@
         <java.version>21</java.version>
         <spring-cloud.version>2025.1.0</spring-cloud.version>
         <otelVersion>2.22.0</otelVersion>
-        <testcontainers.version>1.20.6</testcontainers.version>
+        <testcontainers.version>1.21.3</testcontainers.version>
     </properties>
     <dependencies>
         <dependency>
@@ -231,6 +231,19 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <!-- DOCKER_HOST: env var real (docker-java la lee del SO, no de system properties).
+                         Apunta al pipe del motor Linux de Docker Desktop; el default `docker_engine`
+                         responde con basura en este equipo y Testcontainers marca los tests como skipped.
+                         api.version: system property de docker-java (no hay env var equivalente).
+                         Sin esto, el motor rechaza con "client version 1.32 is too old, min 1.40". -->
+                    <environmentVariables>
+                        <DOCKER_HOST>npipe:////./pipe/docker_engine_linux</DOCKER_HOST>
+                    </environmentVariables>
+                    <systemPropertyVariables>
+                        <api.version>1.44</api.version>
+                    </systemPropertyVariables>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

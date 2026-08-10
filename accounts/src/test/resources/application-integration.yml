@@ -15,6 +15,8 @@ spring:
         enabled: false         # sin Kubernetes discovery
     function:
       definition: ""           # desactivar bindings de Spring Cloud Stream
+    # El test binder se activa via @EnableTestBinder en el IT (spring-cloud-stream 5.x
+    # ya no autorregistra el binder; no hay META-INF/spring.binders en el jar).
   jpa:
     hibernate:
       ddl-auto: none           # el schema lo pone schema.sql (fuente unica de verdad)
