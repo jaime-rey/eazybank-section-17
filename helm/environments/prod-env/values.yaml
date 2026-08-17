@@ -14,8 +14,8 @@ global:
   otelLogsExporter: none
   kafkaBrokerURL: kafka-controller-0.kafka-controller-headless.default.svc.cluster.local:9092
 
-# Override del gateway solo para prod: LoadBalancer en 8074 para no chocar con dev (8072) ni qa (8073).
-# El contenedor sigue escuchando en 8072; solo cambia el puerto externo del Service.
+# Gateway override for prod only: LoadBalancer on 8074 to avoid clashing with dev (8072) or qa (8073).
+# The container still listens on 8072; only the external Service port changes.
 gatewayserver:
   service:
     port: 8074

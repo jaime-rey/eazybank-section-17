@@ -1,9 +1,9 @@
-# Overlay para desplegar dev-env en GKE.
-# Uso:
+# Overlay to deploy dev-env on GKE.
+# Usage:
 #   helm upgrade --install dev-env helm/environments/dev-env -f helm/environments/dev-env/values.yaml -f helm/environments/dev-env/gke-values.yaml
 #
-# Sobrescribe la ruta de las imagenes (Artifact Registry) y baja replicas a 1
-# para que el stack quepa en 3 nodos e2-medium (~9GB utiles).
+# Overrides the image path (Artifact Registry) and lowers replicas to 1 so the
+# stack fits in 3 e2-medium nodes (~9GB usable).
 
 accounts:
   image:

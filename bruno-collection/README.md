@@ -1,83 +1,86 @@
 # EazyBank s17 — Bruno collection
 
-Colección de pruebas contra el gateway. Dos entornos:
+Test collection against the gateway. Two environments:
 
-- **Local**: cluster de Docker Desktop (gateway `localhost:8072`, Keycloak `localhost:80`).
-- **Remote-GKE**: cluster de GKE con LoadBalancer public IPs (ver `HANDOFF.md` §"Deploy en GKE").
+- **Local**: Docker Desktop cluster (gateway `localhost:8072`, Keycloak `localhost:80`).
+- **Remote-GKE**: GKE cluster with LoadBalancer public IPs (see `HANDOFF.md` §"Deploy on GKE").
 
-## Requisitos previos
+## Prerequisites
 
-1. Cluster levantado. Para local: `.\deploy-cluster.ps1`. Para GKE: seguir la receta
-   del `HANDOFF.md` (arrancar cluster + `kubectl apply` de infra + `helm install`).
-2. Cliente OAuth `eazybank-callcenter-cc` creado en el Keycloak del cluster que vayas
-   a usar (Keycloak corre H2 en memoria — al recrear el cluster hay que rehacerlo):
+1. Cluster up. For local: `.\deploy-cluster.ps1`. For GKE: follow the recipe in
+   `HANDOFF.md` (bring up cluster + `kubectl apply` for infra + `helm install`).
+2. OAuth client `eazybank-callcenter-cc` created in the Keycloak of the cluster you
+   are going to use (Keycloak runs H2 in memory — recreating the cluster means
+   you have to recreate the client):
    ```powershell
    .\create-keycloak-client.ps1 -ClientId eazybank-callcenter-cc -Roles ACCOUNTS,CARDS,LOANS
    ```
-   El script hace `kubectl exec` al pod de keycloak, así que respeta el contexto de
-   `kubectl` — funciona igual contra Docker Desktop o GKE. Imprime el `secret`.
-3. Bruno instalado: https://www.usebruno.com/
+   The script does a `kubectl exec` into the keycloak pod, so it respects the
+   current `kubectl` context — it works the same against Docker Desktop or GKE.
+   It prints the `secret`.
+3. Bruno installed: https://www.usebruno.com/
 
-## Configurar
+## Configure
 
-1. Abre Bruno → **Open Collection** → selecciona esta carpeta `bruno-collection`.
-2. Panel de environments (arriba a la derecha) → **Local** o **Remote-GKE**.
-3. Edita el env (icono lápiz) y **pega el `clientSecret` que devolvió el script**
-   (los ficheros traen `PASTE_HERE_FROM_create-keycloak-client.ps1` como placeholder —
-   no se commitea el valor real). El `token` se rellena solo cuando corras
+1. Open Bruno → **Open Collection** → select this `bruno-collection` folder.
+2. Environments panel (top right) → **Local** or **Remote-GKE**.
+3. Edit the env (pencil icon) and **paste the `clientSecret` returned by the script**
+   (the files ship `PASTE_HERE_FROM_create-keycloak-client.ps1` as a placeholder —
+   the real value is not committed). The `token` fills itself in when you run
    `Auth/Get Token`.
-4. Para **Remote-GKE**, verifica que las IPs del env coinciden con las actuales:
+4. For **Remote-GKE**, verify that the IPs in the env match the current ones:
    ```powershell
    kubectl get svc gatewayserver keycloak
    ```
-   Si cambian (por recrear el cluster), actualiza `gatewayUrl` y `keycloakUrl` en el env.
-   Los puertos son: gateway `:8072`, keycloak `:80`.
+   If they change (because you recreated the cluster), update `gatewayUrl` and
+   `keycloakUrl` in the env. Ports are: gateway `:8072`, keycloak `:80`.
 
-## Cómo usar
+## How to use
 
-### Uso normal (una request a la vez)
+### Normal use (one request at a time)
 
-1. Corre **Auth → Get Token** una vez. Guarda `{{token}}` en el env.
-2. Corre cualquier request de Accounts/Cards/Loans. Usa `{{mobileNumber}}` del env
-   (por defecto `5551000001`). Cambia `mobileNumber` en el env para probar otros.
+1. Run **Auth → Get Token** once. Stores `{{token}}` in the env.
+2. Run any Accounts/Cards/Loans request. Uses `{{mobileNumber}}` from the env
+   (default `5551000001`). Change `mobileNumber` in the env to try others.
 
-### Uso data-driven (5 clientes desde `data/customers.json`)
+### Data-driven use (5 customers from `data/customers.json`)
 
-Bruno tiene un **Runner** iterativo:
+Bruno has an iterative **Runner**:
 
-1. Corre **Auth → Get Token** una vez (llena `{{token}}`).
-2. Click derecho sobre carpeta `Accounts` → **Run Folder**.
-3. En el diálogo del Runner, en el campo **Data**, selecciona `bruno-collection/data/customers.json`.
-4. Marca "Iterate over data file". Corre.
-5. Bruno ejecuta Create → Fetch → Update → Delete para cada uno de los 5 clientes.
-   En cada iteración `{{name}}`, `{{email}}`, `{{mobileNumber}}` toman los valores de la fila.
+1. Run **Auth → Get Token** once (fills `{{token}}`).
+2. Right-click the `Accounts` folder → **Run Folder**.
+3. In the Runner dialog, in the **Data** field, select `bruno-collection/data/customers.json`.
+4. Check "Iterate over data file". Run.
+5. Bruno executes Create → Fetch → Update → Delete for each of the 5 customers.
+   On each iteration `{{name}}`, `{{email}}`, `{{mobileNumber}}` take the values
+   from the row.
 
-Después del Runner de `Accounts`, si quieres probar Cards/Loans **sin** el Delete final,
-comenta la línea `seq: 4` en `Accounts/Delete.bru` o simplemente sáltalo antes de correr
-los otros folders.
+After the `Accounts` Runner, if you want to try Cards/Loans **without** the final
+Delete, comment out the `seq: 4` line in `Accounts/Delete.bru` or simply skip it
+before running the other folders.
 
-## Flujo end-to-end recomendado
+## Recommended end-to-end flow
 
 ```
 Auth/Get Token
-    └── Accounts (Runner con customers.json, quitando Delete)
-        └── Cards (Runner con customers.json)
-            └── Loans (Runner con customers.json)
-                └── Accounts/Delete (uno a uno para limpiar — borra tambien cards/loans en cascada)
+    └── Accounts (Runner with customers.json, skipping Delete)
+        └── Cards (Runner with customers.json)
+            └── Loans (Runner with customers.json)
+                └── Accounts/Delete (one by one to clean up — also cascades cards/loans)
 ```
 
-## Renovar el token
+## Renew the token
 
-El token dura ~1 minuto (config por defecto de Keycloak master). Cuando veas 401 en
-requests que sí llevan `Authorization`, vuelve a correr **Auth → Get Token**.
+The token lasts ~1 minute (default Keycloak master config). When you see 401 on
+requests that do carry `Authorization`, re-run **Auth → Get Token**.
 
-## Renovar el secret
+## Renew the secret
 
-Si Keycloak reinicia (H2 en memoria), el cliente se pierde. Vuelve a lanzar
-`create-keycloak-client.ps1` y actualiza `clientSecret` en el env.
+If Keycloak restarts (H2 in memory), the client is lost. Run
+`create-keycloak-client.ps1` again and update `clientSecret` in the env.
 
-## Endpoints sin auth vs con auth
+## Endpoints without auth vs with auth
 
-- **GET** (`Fetch`, `contact-info`, etc.) → `permitAll`, no requieren token.
-- **POST / PUT / DELETE** → requieren `Bearer` con roles `ACCOUNTS`/`CARDS`/`LOANS`
-  según el path.
+- **GET** (`Fetch`, `contact-info`, etc.) → `permitAll`, no token required.
+- **POST / PUT / DELETE** → require `Bearer` with roles `ACCOUNTS`/`CARDS`/`LOANS`
+  depending on the path.

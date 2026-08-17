@@ -16,9 +16,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// Testcontainers + MySQL real. Requiere Docker en ejecución.
-// La conexión al motor Linux de Docker Desktop y la API version se fijan en el
-// pom (maven-failsafe-plugin: DOCKER_HOST env var + -Dapi.version). Ver pom.xml.
+// Testcontainers + real MySQL. Requires Docker running.
+// Connection to Docker Desktop's Linux engine and the API version are set in the
+// pom (maven-failsafe-plugin: DOCKER_HOST env var + -Dapi.version). See pom.xml.
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
 @ActiveProfiles("integration")

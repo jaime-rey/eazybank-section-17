@@ -1,237 +1,247 @@
-# HANDOFF — EazyBank Section 17 (build s17 + Kubernetes en Docker Desktop)
+# HANDOFF — EazyBank Section 17 (s17 build + Kubernetes on Docker Desktop)
 
-Contexto para continuar en Claude Code (terminal integrada del IDE). Lee este archivo
-y sigue desde "Pendientes". Estado a fecha de la última sesión.
+Context to continue in Claude Code (IDE integrated terminal). Read this file
+and pick up from "Pending". State as of the last session.
 
-## Objetivo
-Construir las imágenes Docker de los 6 microservicios con tag `s17` y desplegar el
-clúster completo en el Kubernetes de Docker Desktop (Kafka, Keycloak, Prometheus,
-Grafana, Redis + microservicios). Curso eazybytes, proyecto en `C:\Users\User\spring boot\section_17`.
+## Goal
+Build the Docker images of the 6 microservices with the `s17` tag and deploy
+the full cluster on Docker Desktop's Kubernetes (Kafka, Keycloak, Prometheus,
+Grafana, Redis + microservices). EazyBytes course, project at
+`C:\Users\User\spring boot\section_17`.
 
-## Arquitectura relevante
-- 6 microservicios (Spring Boot, build con Jib): configserver, accounts, cards, loans, gatewayserver, message.
-  Cada `pom.xml` construye `eazybytes/<svc>:s17`.
-- **No usa Eureka**: descubrimiento vía **Spring Cloud Kubernetes Discovery Server**
-  (service `spring-cloud-kubernetes-discoveryserver:80`, desplegado aparte, NO en estos charts).
-- Config externa: config server tira del repo git `https://github.com/eazybytes/eazybytes-config.git`.
-- Gateway usa **Redis** para rate limiting.
+## Relevant architecture
+- 6 microservices (Spring Boot, built with Jib): configserver, accounts, cards, loans, gatewayserver, message.
+  Each `pom.xml` builds `eazybytes/<svc>:s17`.
+- **No Eureka**: discovery via **Spring Cloud Kubernetes Discovery Server**
+  (service `spring-cloud-kubernetes-discoveryserver:80`, deployed separately, NOT in these charts).
+- External config: config server pulls from git repo `https://github.com/eazybytes/eazybytes-config.git`.
+- Gateway uses **Redis** for rate limiting.
 
-## Estado actual del clúster
-Tres entornos desplegados y sanos en paralelo:
+## Current cluster state
+Three environments deployed and healthy in parallel:
 
-| Namespace | Release         | Gateway            | Infra propia                          | Salud |
-|-----------|-----------------|--------------------|---------------------------------------|-------|
-| `default` | `dev-env`       | http://localhost:8072 | redis + discovery en `default`     | UP    |
-| `qa`      | `eazybank-qa`   | http://localhost:8073 | comparte redis+discovery de `default` vía FQDN | UP |
-| `prod`    | `eazybank-prod` | http://localhost:8074 | redis + discovery **propios** en `prod` | UP  |
+| Namespace | Release         | Gateway            | Own infra                             | Health |
+|-----------|-----------------|--------------------|---------------------------------------|--------|
+| `default` | `dev-env`       | http://localhost:8072 | redis + discovery in `default`      | UP     |
+| `qa`      | `eazybank-qa`   | http://localhost:8073 | shares `default`'s redis+discovery via FQDN | UP |
+| `prod`    | `eazybank-prod` | http://localhost:8074 | own redis + discovery in `prod`     | UP     |
 
-Infra compartida en `default`: `kafka`, `keycloak`, `kube-prometheus`, `grafana`, `redis` (manifiesto),
-`spring-cloud-kubernetes-discoveryserver` (manifiesto, ver más abajo).
+Shared infra in `default`: `kafka`, `keycloak`, `kube-prometheus`, `grafana`, `redis` (manifest),
+`spring-cloud-kubernetes-discoveryserver` (manifest, see below).
 
-Accesos (Docker Desktop, LoadBalancer en localhost):
+Access (Docker Desktop, LoadBalancer on localhost):
 - Gateways: dev 8072 · qa 8073 · prod 8074
 - Grafana: http://localhost:3000 · Prometheus: http://localhost:9090
 - Keycloak: http://localhost (admin `user` / `password`)
 
-## Problemas resueltos (y cómo)
-1. **Tag s14 vs s17**: los charts de servicio apuntaban a `s14`. Fijado `s17` en cada
+## Problems solved (and how)
+1. **s14 vs s17 tag**: the service charts pointed to `s14`. Pinned `s17` in each
    `helm/eazybank-services/*/values.yaml`.
-2. **eurekaserver inexistente**: quitado de `dev-env/Chart.yaml` y borrado su `.tgz` de
-   `charts/`. (Se usa el discovery server nativo de K8s.)
-3. **Discovery URL faltante** (crash `DiscoveryServerUrlInvalidException`): añadida
-   `global.discoveryServerURL` y su inyección como env `SPRING_CLOUD_KUBERNETES_DISCOVERY_DISCOVERYSERVERURL`
-   en `helm/eazybank-common/templates/deployment.yaml`.
-4. **Keycloak OOMKilled**: memoria subida a 2Gi en `helm/keycloak/values.yaml`.
-5. **Redis DOWN en el gateway**: creado `redis.yaml` (Deployment+Service `redis:6379`);
-   gateway con `redis_enabled: true` + `global.redisHost/redisPort`.
-6. **Restos de Eureka completamente eliminados**: tras el fix #3 quedaban leftovers
-   inertes (una key huérfana en el ConfigMap, un bloque `{{ if .Values.eureka_enabled }}`
-   en el deployment.yaml, un flag `eureka_enabled` en los 6 values de servicios —con la
-   inconsistencia latente de que accounts/cards/loans lo tenían en `true`—, un
-   `eurekaServerURL` en los 3 envs, y un scrape job de eureka en Prometheus). Todo
-   borrado; `grep -i eureka helm/` da 0 resultados. Sin cambio funcional (era todo
-   código muerto), pero elimina despistes futuros.
-7. **Split-brain H2 con `replicas: 2`** (bug de datos, no de código): cada pod de
-   accounts/cards/loans traía su propio H2 en memoria (`jdbc:h2:mem:testdb`), y el
-   Service de K8s hace round-robin → Create iba a pod A, Fetch a pod B → 404. En
-   Bruno se manifestaba como flakiness pseudo-aleatoria (~50% de fallos) imposible
-   de depurar sin ver el manifest de replicas. Solución: `h2-server.yaml`
-   (imagen `oscarfonts/h2`, service `h2:1521`) que corre 1 H2 server aparte;
-   cada servicio se conecta a **su propia BD lógica** en él vía
-   `jdbc:h2:tcp://h2:1521/mem:{accounts,cards,loans}db`. El override va por env
-   `SPRING_DATASOURCE_URL` inyectada desde `eazybank-common/templates/deployment.yaml`
-   con un bloque `{{ if .Values.h2_enabled }}` (misma mecánica que Redis). Activado
-   en `values.yaml` de accounts/cards/loans con `h2_enabled: true` + `h2_dbName: XXXdb`.
-   Sin tocar código Java. Caveat: sigue siendo `mem:` (si el pod H2 reinicia se
-   pierden datos) — suficiente para dev; para persistencia se pasa a `file:` con PVC.
+2. **Non-existent eurekaserver**: removed from `dev-env/Chart.yaml` and its `.tgz`
+   deleted from `charts/`. (The native K8s discovery server is used.)
+3. **Missing discovery URL** (crash `DiscoveryServerUrlInvalidException`): added
+   `global.discoveryServerURL` and its injection as env
+   `SPRING_CLOUD_KUBERNETES_DISCOVERY_DISCOVERYSERVERURL` in
+   `helm/eazybank-common/templates/deployment.yaml`.
+4. **Keycloak OOMKilled**: memory bumped to 2Gi in `helm/keycloak/values.yaml`.
+5. **Redis DOWN in the gateway**: created `redis.yaml` (Deployment+Service `redis:6379`);
+   gateway with `redis_enabled: true` + `global.redisHost/redisPort`.
+6. **Full Eureka cleanup**: after fix #3 there were inert leftovers (an orphan
+   key in the ConfigMap, an `{{ if .Values.eureka_enabled }}` block in
+   deployment.yaml, an `eureka_enabled` flag in all 6 service values files —with
+   the latent inconsistency that accounts/cards/loans had it `true`—, a
+   `eurekaServerURL` in the 3 envs, and a Prometheus eureka scrape job). All
+   removed; `grep -i eureka helm/` returns 0 results. No functional change (it
+   was all dead code), but it removes future confusion.
+7. **H2 split-brain with `replicas: 2`** (data bug, not code): each accounts/cards/loans
+   pod carried its own in-memory H2 (`jdbc:h2:mem:testdb`), and the K8s Service
+   round-robins → Create hit pod A, Fetch hit pod B → 404. In Bruno it showed
+   as pseudo-random flakiness (~50% failures) impossible to debug without
+   looking at the replica manifest. Fix: `h2-server.yaml` (image
+   `oscarfonts/h2`, service `h2:1521`) that runs 1 H2 server on the side; each
+   service connects to **its own logical DB** in it via
+   `jdbc:h2:tcp://h2:1521/mem:{accounts,cards,loans}db`. The override is
+   injected via the `SPRING_DATASOURCE_URL` env in
+   `eazybank-common/templates/deployment.yaml` with a `{{ if .Values.h2_enabled }}`
+   block (same mechanism as Redis). Enabled in accounts/cards/loans
+   `values.yaml` with `h2_enabled: true` + `h2_dbName: XXXdb`. No Java code
+   changes. Caveat: it is still `mem:` (if the H2 pod restarts the data is
+   lost) — enough for dev; for persistence switch to `file:` with a PVC.
 
-Todo lo anterior está **consolidado en los charts** (sin parches en caliente). Un
-`build-images-s17.ps1` + `deploy-cluster.ps1` levanta todo desde cero.
+All of the above is **consolidated in the charts** (no hot patches). One
+`build-images-s17.ps1` + `deploy-cluster.ps1` brings everything up from scratch.
 
-## Ficheros creados/editados
-Creados: `build-images-s17.ps1`, `deploy-cluster.ps1`, `deploy-env.ps1`,
+## Files created/edited
+Created: `build-images-s17.ps1`, `deploy-cluster.ps1`, `deploy-env.ps1`,
 `teardown-cluster.ps1`, `redis.yaml`, `discovery-server.yaml`, `h2-server.yaml`,
-`create-keycloak-client.ps1`, `bruno-collection/`, `DEPLOY-README.md`, este `HANDOFF.md`.
-Editados (charts): `helm/eazybank-common/templates/{deployment.yaml,configmap.yaml}`,
+`create-keycloak-client.ps1`, `bruno-collection/`, `DEPLOY-README.md`, this `HANDOFF.md`.
+Edited (charts): `helm/eazybank-common/templates/{deployment.yaml,configmap.yaml}`,
 `helm/environments/{dev,qa,prod}-env/values.yaml`, `helm/environments/dev-env/Chart.yaml`,
 `helm/keycloak/values.yaml`, `helm/kube-prometheus/templates/configmap.yaml`,
-`helm/eazybank-services/*/values.yaml` (tag s17, gateway con `redis_enabled: true`,
-`eureka_enabled` eliminado en todos, accounts/cards/loans con `h2_enabled: true`).
+`helm/eazybank-services/*/values.yaml` (s17 tag, gateway with `redis_enabled: true`,
+`eureka_enabled` removed from all, accounts/cards/loans with `h2_enabled: true`).
 
-`discovery-server.yaml`: manifiesto reutilizable con los 5 objetos del discovery server
+`discovery-server.yaml`: reusable manifest with the 5 discovery-server objects
 (`ServiceAccount`, `Role namespace-reader`, `RoleBinding`, `Deployment`, `Service`).
-Aplícalo con `kubectl apply -f discovery-server.yaml -n <ns>` en cualquier namespace donde
-quieras un discovery propio. Usa `Role` (no `ClusterRole`), así solo lee pods/services/endpoints
-de SU namespace — clave para el aislamiento (ver sección siguiente).
+Apply with `kubectl apply -f discovery-server.yaml -n <ns>` in any namespace
+where you want a dedicated discovery. Uses `Role` (not `ClusterRole`), so it
+only reads pods/services/endpoints from ITS namespace — key for isolation
+(see next section).
 
-## Los 3 entornos (helm/environments)
-dev-env (profile default), qa-env (qa), prod-env (prod). Difieren en `configMapName`,
-`activeProfile`, el puerto del gateway y la estrategia de infra:
+## The 3 environments (helm/environments)
+dev-env (default profile), qa-env (qa), prod-env (prod). They differ in
+`configMapName`, `activeProfile`, gateway port and infra strategy:
 
-- **dev-env** (namespace `default`): gateway 8072. Redis y discovery en `default`
-  (referenciados con nombre corto — resuelven local al namespace).
-- **qa-env** (namespace `qa`): gateway 8073. `redisHost` y `discoveryServerURL` con
-  **FQDN a `.default.svc.cluster.local`** → reutiliza la infra de `default`. `gatewayserver.service.port: 8073`
-  overrideado desde el values del env. **NO aislado del todo** — ver sección "Aislamiento".
-- **prod-env** (namespace `prod`): gateway 8074. `redisHost` y `discoveryServerURL` con
-  **nombre corto** → resuelven a redis+discovery **propios** desplegados en `prod`.
-  Aislamiento completo. `gatewayserver.service.port: 8074` overrideado desde el values del env.
+- **dev-env** (namespace `default`): gateway 8072. Redis and discovery in `default`
+  (referenced by short name — they resolve local to the namespace).
+- **qa-env** (namespace `qa`): gateway 8073. `redisHost` and `discoveryServerURL`
+  use **FQDN to `.default.svc.cluster.local`** → reuses `default`'s infra.
+  `gatewayserver.service.port: 8073` overridden from the env values file.
+  **NOT fully isolated** — see "Isolation" section.
+- **prod-env** (namespace `prod`): gateway 8074. `redisHost` and `discoveryServerURL`
+  use **short name** → resolve to **own** redis+discovery deployed in `prod`.
+  Full isolation. `gatewayserver.service.port: 8074` overridden from the env values file.
 
-Truco del puerto: solo se overridea `service.port` (externo). `service.targetPort` y
-`containerPort` se quedan en 8072 → el contenedor sigue escuchando donde siempre, el
-LoadBalancer traduce `localhost:807X` → pod:8072.
+Port trick: only `service.port` (external) is overridden. `service.targetPort`
+and `containerPort` stay at 8072 → the container keeps listening where it
+always does, the LoadBalancer translates `localhost:807X` → pod:8072.
 
-## Aislamiento entre entornos (importante)
-El discovery server tiene `Role` (no `ClusterRole`) → solo ve pods/services de SU namespace.
-Los servicios de los 3 entornos se llaman igual (`accounts`, `cards`, `loans`, `gatewayserver`,
-`message`, `configserver`), así que **quién resuelve el discovery importa**:
+## Isolation between environments (important)
+The discovery server has a `Role` (not `ClusterRole`) → it only sees pods/services
+in ITS namespace. The services in the 3 environments are all named the same
+(`accounts`, `cards`, `loans`, `gatewayserver`, `message`, `configserver`), so
+**which discovery resolves matters**:
 
-- **qa** apunta al discovery de `default` (opción "FQDN"). Salud individual OK, pero cuando
-  el gateway de qa rutee a `/accounts/...`, el discovery le devolverá los pods de
-  `accounts` del namespace `default` (= dev-env). Cross-contaminación de tráfico.
-  Válido para verificar despliegue; NO válido si quieres tests reales de qa.
-- **prod** tiene discovery propio en `prod`. El gateway de prod solo ve pods de prod.
-  Aislamiento total.
+- **qa** points to `default`'s discovery ("FQDN" option). Individual health is OK,
+  but when qa's gateway routes to `/accounts/...`, discovery returns the `accounts`
+  pods from the `default` namespace (= dev-env). Cross-contamination of traffic.
+  Fine for verifying the deploy; NOT fine for real qa testing.
+- **prod** has its own discovery in `prod`. prod's gateway only sees prod pods.
+  Full isolation.
 
-Si en algún momento quieres qa realmente aislado, migrar de "FQDN" a "infra propia":
+If at some point you want qa truly isolated, migrate from "FQDN" to "own infra":
 `kubectl apply -f redis.yaml -n qa` + `kubectl apply -f discovery-server.yaml -n qa`,
-y revertir las 2 líneas de `qa-env/values.yaml` a los nombres cortos.
+and revert the 2 lines in `qa-env/values.yaml` back to short names.
 
-## Deploy en GKE (segunda pasada OK end-to-end · cluster BORRADO 2026-08-07)
+## Deploy on GKE (second pass, OK end-to-end · cluster DELETED 2026-08-07)
 
-> **Receta operacional para recrear:** [GKE-FROM-SCRATCH.md](GKE-FROM-SCRATCH.md).
-> Esta sección conserva contexto e historia; el recipe reproducible vive allí.
+> **Operational recipe to recreate:** [GKE-FROM-SCRATCH.md](GKE-FROM-SCRATCH.md).
+> This section keeps context and history; the reproducible recipe lives there.
 
-**Cuenta/proyecto** (persisten): `jreycasa@gmail.com` / `project-aaa96c1a-20d1-43bf-819`
-(project number `594159792471`). Region default `us-central1`.
+**Account/project** (persist): `jreycasa@gmail.com` / `project-aaa96c1a-20d1-43bf-819`
+(project number `594159792471`). Default region `us-central1`.
 
-**Lo que sobrevivió al delete del cluster:**
+**What survived the cluster delete:**
 - Artifact Registry `us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/*`
-  con las 6 imágenes s17 pusheadas (~1.25 GB, ~$0.13/mes).
-- **IAM binding en el repo `eazybank`**: `roles/artifactregistry.reader` para
-  `594159792471-compute@developer.gserviceaccount.com` (la default compute SA que
-  usan los nodos GKE). Persiste al borrar el cluster porque vive en el repo, no en él.
-- APIs habilitadas: container, artifactregistry, compute.
-- Overlay `helm/environments/dev-env/gke-values.yaml` (apunta a Artifact Registry
-  + `replicaCount: 1`).
+  with the 6 s17 images pushed (~1.25 GB, ~$0.13/month).
+- **IAM binding on the `eazybank` repo**: `roles/artifactregistry.reader` for
+  `594159792471-compute@developer.gserviceaccount.com` (the default compute SA
+  that GKE nodes use). Persists after cluster deletion because it lives on the
+  repo, not the cluster.
+- Enabled APIs: container, artifactregistry, compute.
+- Overlay `helm/environments/dev-env/gke-values.yaml` (points at Artifact
+  Registry + `replicaCount: 1`).
 
-**Lo que se aprendió** (aplicable al recrear):
-- Con 3 nodos e2-medium (~4.5 vCPU útiles) **no cabe** el stack completo — Keycloak
-  se queda Pending por falta de CPU. **Arrancar con 4 nodos desde el principio.**
-- Cluster **Standard zonal**: control plane gratis (free tier del primer cluster).
-- kubectl necesita `gke-gcloud-auth-plugin` en PATH — viene con gcloud SDK; si
-  la terminal es nueva, hacer `set PATH=%PATH%;C:\Users\User\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin`
-  o usar PowerShell nueva.
-- **ImagePull 403 al Artifact Registry**: los oauth scopes por defecto del node pool
-  (`devstorage.read_only`) **sí sirven** para pulls desde AR — no hace falta recrear
-  el pool con `cloud-platform`. Lo que falta por defecto es el IAM: la default compute
-  SA (`<project-number>-compute@developer.gserviceaccount.com`) necesita
-  `roles/artifactregistry.reader` sobre el repo. Fix (una sola vez por proyecto,
-  ya aplicado y persistente):
+**Lessons learned** (applies on recreate):
+- With 3 e2-medium nodes (~4.5 usable vCPU) the full stack **does not fit** —
+  Keycloak stays Pending due to lack of CPU. **Start with 4 nodes from the beginning.**
+- **Standard zonal** cluster: control plane is free (first cluster free tier).
+- kubectl needs `gke-gcloud-auth-plugin` on PATH — ships with gcloud SDK; if
+  the terminal is new, do `set PATH=%PATH%;C:\Users\User\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin`
+  or open a new PowerShell.
+- **ImagePull 403 to Artifact Registry**: the node pool's default oauth scopes
+  (`devstorage.read_only`) **do work** for pulls from AR — no need to recreate
+  the pool with `cloud-platform`. What is missing by default is the IAM: the
+  default compute SA (`<project-number>-compute@developer.gserviceaccount.com`)
+  needs `roles/artifactregistry.reader` on the repo. Fix (one-time per project,
+  already applied and persistent):
   ```powershell
   gcloud artifacts repositories add-iam-policy-binding eazybank `
     --location=us-central1 `
     --member=serviceAccount:594159792471-compute@developer.gserviceaccount.com `
     --role=roles/artifactregistry.reader
   ```
-  Síntoma sin el binding: pods en `ErrImagePull`; `kubectl describe` muestra
-  `failed to fetch oauth token ... 403 Forbidden` en el pull.
+  Symptom without the binding: pods in `ErrImagePull`; `kubectl describe` shows
+  `failed to fetch oauth token ... 403 Forbidden` on the pull.
 
-**Para recrear el cluster:** ver [GKE-FROM-SCRATCH.md](GKE-FROM-SCRATCH.md) §2.
+**To recreate the cluster:** see [GKE-FROM-SCRATCH.md](GKE-FROM-SCRATCH.md) §2.
 
-**Probado desde fuera con Bruno** (2026-08-07):
-- Env `bruno-collection/environments/Remote-GKE.bru` con las IPs públicas del LB
-  (`gatewayUrl: http://<gw-ip>:8072`, `keycloakUrl: http://<kc-ip>`). Las IPs
-  las reasigna GCP a cada recreación del cluster — actualizar el env con:
+**Tested externally with Bruno** (2026-08-07):
+- Env `bruno-collection/environments/Remote-GKE.bru` with the LB public IPs
+  (`gatewayUrl: http://<gw-ip>:8072`, `keycloakUrl: http://<kc-ip>`). GCP
+  reassigns the IPs on every cluster recreation — update the env with:
   ```powershell
   kubectl get svc gatewayserver keycloak
   ```
-- Cliente Keycloak `eazybank-callcenter-cc` se crea igual que en local con
-  `.\create-keycloak-client.ps1 -ClientId eazybank-callcenter-cc -Roles ACCOUNTS,CARDS,LOANS`.
-  El script hace `kubectl exec` al pod → respeta el kubecontext actual (funciona
-  contra GKE sin cambios). Copiar el secret que imprime y pegarlo en el env de Bruno.
-- No hay mismatch de `iss` en JWT: el gateway solo tiene `jwk-set-uri` (no
-  `issuer-uri`), y ese apunta al service interno de keycloak (`keycloak.default.svc...`).
-  El token puede tener cualquier `iss` mientras esté firmado por la misma clave —
-  por eso vale hacer login contra la IP pública del keycloak.
-- Flujo validado end-to-end: `Auth/Get Token` (200) → `Accounts/Create` (201) →
-  `Accounts/Fetch` (200 con branchAddress del config server) → `Accounts/Delete` (200).
-- Keycloak sigue con H2 en memoria: si el pod reinicia, se pierden clientes/roles
-  y hay que re-ejecutar `create-keycloak-client.ps1`.
+- Keycloak client `eazybank-callcenter-cc` is created the same way as locally
+  with `.\create-keycloak-client.ps1 -ClientId eazybank-callcenter-cc -Roles ACCOUNTS,CARDS,LOANS`.
+  The script does `kubectl exec` on the pod → respects the current kubecontext
+  (works against GKE with no changes). Copy the secret it prints and paste it
+  into the Bruno env.
+- No JWT `iss` mismatch: the gateway only has `jwk-set-uri` (no `issuer-uri`),
+  and that points to keycloak's internal service (`keycloak.default.svc...`).
+  The token can carry any `iss` as long as it is signed by the same key — so
+  logging in against keycloak's public IP works.
+- End-to-end flow validated: `Auth/Get Token` (200) → `Accounts/Create` (201) →
+  `Accounts/Fetch` (200 with branchAddress from the config server) →
+  `Accounts/Delete` (200).
+- Keycloak still on H2 in memory: if the pod restarts, clients/roles are lost
+  and you have to re-run `create-keycloak-client.ps1`.
 
-**Kill switch al terminar** (siempre, evitar sangría):
+**Kill switch when done** (always, to avoid bleeding costs):
 ```powershell
 gcloud container clusters delete cluster-1 --zone us-central1-a --quiet
 ```
-Sobreviven al delete: repo Artifact Registry con las imágenes, el IAM binding del
-repo, y las APIs habilitadas. La próxima recreación se salta el debug del 403.
+Survives the delete: the Artifact Registry repo with the images, the repo IAM
+binding, and the enabled APIs. The next recreation skips the 403 debug.
 
-## Pendientes / próximos pasos posibles
-- [ ] Borrar en disco los `.tgz` de eureka sobrantes en qa/prod (el deploy los borra solo,
-      pero para dejar limpio):
+## Pending / possible next steps
+- [ ] Delete on disk the leftover eureka `.tgz` files in qa/prod (the deploy
+      removes them on its own, but for a clean state):
       `Remove-Item .\helm\environments\qa-env\charts\eurekaserver-0.1.0.tgz -EA SilentlyContinue`
       `Remove-Item .\helm\environments\prod-env\charts\eurekaserver-0.1.0.tgz -EA SilentlyContinue`
-- [ ] (Opcional) Aislar qa de verdad: aplicar redis+discovery en `qa` y revertir a nombres
-      cortos en `qa-env/values.yaml` (ver sección "Aislamiento entre entornos").
-- [ ] (Cosmético) Silenciar los errores de OpenTelemetry hacia `tempo` cuando NO se usa
-      observabilidad (o desplegarla con `deploy-cluster.ps1 -WithObservability`).
-- [ ] Re-desplegar los 3 env-releases y `kube-prometheus` para que el clúster refleje el
-      cleanup de Eureka (los ConfigMaps vivos aún contienen la key huérfana; el
-      Prometheus vivo aún tiene el scrape job de eureka como `up==0`). Sin urgencia.
-- [ ] (Opcional) Persistir el H2 server con PVC (ahora al reiniciar el pod se pierden
-      los datos). Cambiar la URL a `jdbc:h2:tcp://h2:1521//data/XXXdb` y montar PVC.
-- [x] ~~Probar `deploy-env.ps1 -Env qa-env -Release eazybank-qa -Namespace qa`.~~ Hecho.
-- [x] ~~Desplegar prod-env con infra propia en el namespace prod.~~ Hecho.
-- [x] ~~Limpieza total de Eureka en los charts.~~ Hecho (ver "Problemas resueltos" #6).
-- [x] ~~Integrar `discovery-server.yaml` en `deploy-cluster.ps1`.~~ Hecho.
-- [x] ~~Arreglar split-brain de H2.~~ Hecho (ver "Problemas resueltos" #7).
+- [ ] (Optional) Truly isolate qa: apply redis+discovery in `qa` and revert to
+      short names in `qa-env/values.yaml` (see "Isolation between environments").
+- [ ] (Cosmetic) Silence the OpenTelemetry errors to `tempo` when observability
+      is NOT deployed (or deploy it with `deploy-cluster.ps1 -WithObservability`).
+- [ ] Redeploy the 3 env-releases and `kube-prometheus` so the live cluster
+      reflects the Eureka cleanup (live ConfigMaps still contain the orphan
+      key; live Prometheus still has the eureka scrape job as `up==0`). No rush.
+- [ ] (Optional) Persist the H2 server with a PVC (right now restarting the pod
+      loses the data). Change the URL to `jdbc:h2:tcp://h2:1521//data/XXXdb`
+      and mount a PVC.
+- [x] ~~Try `deploy-env.ps1 -Env qa-env -Release eazybank-qa -Namespace qa`.~~ Done.
+- [x] ~~Deploy prod-env with its own infra in the prod namespace.~~ Done.
+- [x] ~~Full Eureka cleanup in the charts.~~ Done (see "Problems solved" #6).
+- [x] ~~Integrate `discovery-server.yaml` into `deploy-cluster.ps1`.~~ Done.
+- [x] ~~Fix the H2 split-brain.~~ Done (see "Problems solved" #7).
 
-## Comandos clave
+## Key commands
 ```powershell
-# Build de imágenes s17
+# Build s17 images
 .\build-images-s17.ps1
-# Desplegar todo (infra + microservicios dev-env en default)
+# Deploy everything (infra + dev-env microservices in default)
 .\deploy-cluster.ps1
 
-# Desplegar un entorno adicional en su namespace
+# Deploy an additional environment in its namespace
 .\deploy-env.ps1 -Env qa-env   -Release eazybank-qa   -Namespace qa
 .\deploy-env.ps1 -Env prod-env -Release eazybank-prod -Namespace prod
 
-# Infra propia dentro de un namespace (necesario si el entorno usa nombres cortos)
+# Own infra inside a namespace (needed if the env uses short names)
 kubectl create namespace <ns>
 kubectl apply -f redis.yaml            -n <ns>
 kubectl apply -f discovery-server.yaml -n <ns>
 kubectl apply -f h2-server.yaml        -n <ns>
 
-# Estado y salud
+# Status and health
 kubectl get pods -A
 curl.exe http://localhost:8072/actuator/health   # dev
 curl.exe http://localhost:8073/actuator/health   # qa
 curl.exe http://localhost:8074/actuator/health   # prod
 
-# Desmontar entornos concretos
+# Teardown of specific environments
 helm uninstall eazybank-qa   -n qa   ; kubectl delete namespace qa
 helm uninstall eazybank-prod -n prod ; kubectl delete namespace prod
-# Desmontar todo
+# Teardown everything
 .\teardown-cluster.ps1
 ```

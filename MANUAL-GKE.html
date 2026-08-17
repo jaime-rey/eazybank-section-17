@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -244,34 +244,34 @@
 <body>
 
 <header class="hero">
-  <h1>Manual GKE — EazyBank Section 17</h1>
-  <div class="subtitle">Cómo montar el cluster completo en Google Kubernetes Engine desde un proyecto vacío. Recipe personal.</div>
+  <h1>GKE Manual — EazyBank Section 17</h1>
+  <div class="subtitle">How to bring up the full cluster on Google Kubernetes Engine starting from an empty project. Personal recipe.</div>
   <div class="meta">
-    <span>Proyecto: <code>project-aaa96c1a-20d1-43bf-819</code></span>
+    <span>Project: <code>project-aaa96c1a-20d1-43bf-819</code></span>
     <span>Region: <code>us-central1</code></span>
-    <span>Zona: <code>us-central1-a</code></span>
-    <span>Última recreación validada: 2026-08-07</span>
+    <span>Zone: <code>us-central1-a</code></span>
+    <span>Last validated recreation: 2026-08-07</span>
   </div>
 </header>
 
 <div class="layout">
 
 <aside class="toc">
-  <h3>Contenido</h3>
+  <h3>Contents</h3>
   <ol>
-    <li><a href="#s0">Prereqs de la máquina</a></li>
-    <li><a href="#s1">Login GCP</a></li>
-    <li><a href="#s2">Habilitar APIs</a></li>
-    <li><a href="#s3">Crear repo Artifact Registry</a></li>
-    <li><a href="#s4">Build + push imágenes</a></li>
+    <li><a href="#s0">Machine prereqs</a></li>
+    <li><a href="#s1">GCP login</a></li>
+    <li><a href="#s2">Enable APIs</a></li>
+    <li><a href="#s3">Create Artifact Registry repo</a></li>
+    <li><a href="#s4">Build + push images</a></li>
     <li><a href="#s5">IAM binding</a></li>
-    <li><a href="#s6">Crear cluster GKE</a></li>
+    <li><a href="#s6">Create GKE cluster</a></li>
     <li><a href="#s7">Deploy infra</a></li>
-    <li><a href="#s8">Deploy microservicios</a></li>
-    <li><a href="#s9">Validar end-to-end</a></li>
+    <li><a href="#s8">Deploy microservices</a></li>
+    <li><a href="#s9">Validate end-to-end</a></li>
     <li><a href="#s10">Kill switch</a></li>
     <li><a href="#s11">Troubleshooting</a></li>
-    <li><a href="#s12">Coste</a></li>
+    <li><a href="#s12">Cost</a></li>
   </ol>
 </aside>
 
@@ -279,267 +279,267 @@
 
 <section>
   <p>
-    Doc autocontenido para volver a montar el cluster en meses sin recordar nada.
-    Asume que se parte de un <strong>proyecto GCP vacío</strong> (sin repo, sin
-    imágenes, sin nada) y termina con un cluster GKE corriendo los 6 microservicios
-    y validado desde fuera con Bruno.
+    Self-contained doc to bring the cluster back up months from now without
+    remembering anything. Assumes an <strong>empty GCP project</strong> (no repo,
+    no images, nothing) and ends with a GKE cluster running the 6 microservices
+    and validated externally with Bruno.
   </p>
   <div class="callout">
-    <span class="label">Al día</span> El repo de EazyBank Section 17 debe estar
-    clonado localmente en <code>C:\Users\User\spring boot\section_17</code>. Todos
-    los comandos se ejecutan desde ahí en PowerShell.
+    <span class="label">Up-to-date</span> The EazyBank Section 17 repo must be
+    cloned locally at <code>C:\Users\User\spring boot\section_17</code>. All
+    commands run from there in PowerShell.
   </div>
   <div class="callout cost">
-    <span class="label">Coste actual</span> Todo borrado el 2026-08-07. Estado <strong>$0/mes</strong>.
-    Ver §12 para el desglose al recrear.
+    <span class="label">Current cost</span> Everything deleted on 2026-08-07. State: <strong>$0/month</strong>.
+    See §12 for the breakdown on recreation.
   </div>
 </section>
 
 <section id="s0">
-  <h2><span class="num">0</span>Prereqs de la máquina</h2>
+  <h2><span class="num">0</span>Machine prereqs</h2>
   <ul>
-    <li><strong>Google Cloud SDK</strong> (<code>gcloud</code> + <code>gke-gcloud-auth-plugin</code>). Windows: instalador oficial.</li>
-    <li><strong>kubectl</strong> — <code>gcloud components install kubectl</code> o el que viene con Docker Desktop.</li>
+    <li><strong>Google Cloud SDK</strong> (<code>gcloud</code> + <code>gke-gcloud-auth-plugin</code>). Windows: official installer.</li>
+    <li><strong>kubectl</strong> — <code>gcloud components install kubectl</code> or the one that ships with Docker Desktop.</li>
     <li><strong>helm</strong> v3+.</li>
-    <li><strong>Docker Desktop</strong> — necesario para el build+push de imágenes en §4.</li>
-    <li><strong>JDK 17+</strong> — para el build de Jib.</li>
+    <li><strong>Docker Desktop</strong> — needed for the image build+push in §4.</li>
+    <li><strong>JDK 17+</strong> — for the Jib build.</li>
   </ul>
   <div class="callout warn">
-    <span class="label">Warning</span> Si <code>kubectl</code> se queja de
-    <code>gke-gcloud-auth-plugin not found</code>, el plugin no está en el PATH.
-    Añádelo en la sesión con:
+    <span class="label">Warning</span> If <code>kubectl</code> complains about
+    <code>gke-gcloud-auth-plugin not found</code>, the plugin is not on PATH.
+    Add it to the session with:
     <pre><code>$env:PATH += ";C:\Users\User\AppData\Local\Google\Cloud SDK\google-cloud-sdk\bin"</code></pre>
-    o abre una PowerShell nueva.
+    or open a new PowerShell.
   </div>
 </section>
 
 <section id="s1">
-  <h2><span class="num">1</span>Login en GCP y configurar el proyecto</h2>
+  <h2><span class="num">1</span>Log in to GCP and configure the project</h2>
 <pre><code><span class="kw">gcloud</span> auth login
 <span class="kw">gcloud</span> config set project project-aaa96c1a-20d1-43bf-819
 <span class="kw">gcloud</span> config set compute/region us-central1
 <span class="kw">gcloud</span> config set compute/zone us-central1-a</code></pre>
-  <p>El <code>gcloud auth login</code> abre el navegador para OAuth. Una sola vez por máquina/cuenta.</p>
+  <p><code>gcloud auth login</code> opens the browser for OAuth. Once per machine/account.</p>
 </section>
 
 <section id="s2">
-  <h2><span class="num">2</span>Habilitar APIs <span class="badge persist">persiste</span></h2>
-  <p>Habilita tres APIs. Si ya están enabled, este comando es idempotente y no cobra nada.</p>
+  <h2><span class="num">2</span>Enable APIs <span class="badge persist">persists</span></h2>
+  <p>Enable three APIs. If they are already enabled, this command is idempotent and does not cost anything.</p>
 <pre><code><span class="kw">gcloud</span> services enable container.googleapis.com artifactregistry.googleapis.com compute.googleapis.com</code></pre>
-  <p>Comprobar:</p>
+  <p>Check:</p>
 <pre><code><span class="kw">gcloud</span> services list --enabled --filter=<span class="str">"name:(container.googleapis.com OR artifactregistry.googleapis.com OR compute.googleapis.com)"</span> --format=<span class="str">"value(config.name)"</span></code></pre>
 </section>
 
 <section id="s3">
-  <h2><span class="num">3</span>Crear el repo de Artifact Registry <span class="badge ephemeral">borrado 2026-08-07</span></h2>
+  <h2><span class="num">3</span>Create the Artifact Registry repo <span class="badge ephemeral">deleted 2026-08-07</span></h2>
 <pre><code><span class="kw">gcloud</span> artifacts repositories create eazybank <span class="cmt">`</span>
   --repository-format=docker --location=us-central1 <span class="cmt">`</span>
   --description=<span class="str">"EazyBank microservices Docker images"</span></code></pre>
-  <p>El repo cuesta ~$0.06/mes por las imágenes que contendrá (~630 MB). Ver §12.</p>
+  <p>The repo costs ~$0.06/month for the images it will hold (~630 MB). See §12.</p>
 </section>
 
 <section id="s4">
-  <h2><span class="num">4</span>Build local + push al Artifact Registry</h2>
-  <p>Configura Docker para autenticar contra AR (una sola vez por máquina):</p>
+  <h2><span class="num">4</span>Local build + push to Artifact Registry</h2>
+  <p>Configure Docker to auth against AR (once per machine):</p>
 <pre><code><span class="kw">gcloud</span> auth configure-docker us-central1-docker.pkg.dev</code></pre>
-  <p>Build de las 6 imágenes con Jib (produce tags <code>eazybytes/&lt;svc&gt;:s17</code>):</p>
+  <p>Build the 6 images with Jib (produces <code>eazybytes/&lt;svc&gt;:s17</code> tags):</p>
 <pre><code><span class="kw">cd</span> <span class="str">"C:\Users\User\spring boot\section_17"</span>
 .\build-images-s17.ps1</code></pre>
-  <p>Retag y push:</p>
+  <p>Retag and push:</p>
 <pre><code><span class="kw">$svcs</span> = <span class="kw">@</span>(<span class="str">"configserver"</span>,<span class="str">"accounts"</span>,<span class="str">"cards"</span>,<span class="str">"loans"</span>,<span class="str">"gatewayserver"</span>,<span class="str">"message"</span>)
 <span class="kw">foreach</span> (<span class="kw">$s</span> <span class="kw">in</span> <span class="kw">$svcs</span>) {
     <span class="kw">$dst</span> = <span class="str">"us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank/${s}:s17"</span>
     <span class="kw">docker</span> tag <span class="str">"eazybytes/${s}:s17"</span> <span class="kw">$dst</span>
     <span class="kw">docker</span> push <span class="kw">$dst</span>
 }</code></pre>
-  <p>Comprobar que están las 6:</p>
+  <p>Check that all 6 are there:</p>
 <pre><code><span class="kw">gcloud</span> artifacts docker images list us-central1-docker.pkg.dev/project-aaa96c1a-20d1-43bf-819/eazybank --format=<span class="str">"value(package)"</span></code></pre>
 </section>
 
 <section id="s5">
-  <h2><span class="num">5</span>IAM binding para que los nodos GKE puedan pull <span class="badge persist">persiste</span></h2>
+  <h2><span class="num">5</span>IAM binding so GKE nodes can pull <span class="badge persist">persists</span></h2>
   <div class="callout danger">
-    <span class="label">Crítico</span> Sin esto, los pods se quedan en
-    <code>ErrImagePull</code> con <code>403 Forbidden</code>. Los oauth scopes
-    default del node pool (<code>devstorage.read_only</code>) <strong>sí</strong> sirven para
-    Artifact Registry — solo falta el IAM.
+    <span class="label">Critical</span> Without this, pods stay in
+    <code>ErrImagePull</code> with <code>403 Forbidden</code>. The node pool's
+    default oauth scopes (<code>devstorage.read_only</code>) <strong>do</strong> work for
+    Artifact Registry — only the IAM is missing.
   </div>
 <pre><code><span class="kw">gcloud</span> artifacts repositories add-iam-policy-binding eazybank <span class="cmt">`</span>
   --location=us-central1 <span class="cmt">`</span>
   --member=serviceAccount:594159792471-compute@developer.gserviceaccount.com <span class="cmt">`</span>
   --role=roles/artifactregistry.reader</code></pre>
-  <p>Es idempotente. Si el binding ya existe (persistió de una sesión anterior), no da error.</p>
+  <p>Idempotent. If the binding already exists (persisted from a previous session), it does not error.</p>
 </section>
 
 <section id="s6">
-  <h2><span class="num">6</span>Crear el cluster GKE</h2>
+  <h2><span class="num">6</span>Create the GKE cluster</h2>
   <div class="callout warn">
-    <span class="label">Tamaño</span> Con <strong>3</strong> nodos e2-medium (~4.5 vCPU útiles) no cabe el stack
-    completo — Keycloak se queda Pending. Arrancar con <strong>4 nodos</strong>.
+    <span class="label">Size</span> With <strong>3</strong> e2-medium nodes (~4.5 usable vCPU) the full stack
+    does not fit — Keycloak stays Pending. Start with <strong>4 nodes</strong>.
   </div>
 <pre><code><span class="kw">gcloud</span> container clusters create cluster-1 <span class="cmt">`</span>
   --zone us-central1-a --num-nodes 4 --machine-type e2-medium <span class="cmt">`</span>
   --disk-size 32 --release-channel regular</code></pre>
-  <p>Tarda ~3-5 min. Al terminar, conectar kubectl:</p>
+  <p>Takes ~3-5 min. When it's done, wire kubectl:</p>
 <pre><code><span class="kw">gcloud</span> container clusters get-credentials cluster-1 --zone us-central1-a
-<span class="kw">kubectl</span> get nodes    <span class="cmt"># deben salir 4 Ready</span></code></pre>
+<span class="kw">kubectl</span> get nodes    <span class="cmt"># should show 4 Ready</span></code></pre>
 </section>
 
 <section id="s7">
-  <h2><span class="num">7</span>Deploy de la infra base</h2>
-  <p>Los tres primeros son manifiestos sueltos, independientes entre sí:</p>
+  <h2><span class="num">7</span>Deploy the base infra</h2>
+  <p>The first three are standalone manifests, independent of each other:</p>
 <pre><code><span class="kw">kubectl</span> apply -f redis.yaml
 <span class="kw">kubectl</span> apply -f h2-server.yaml
 <span class="kw">kubectl</span> apply -f discovery-server.yaml</code></pre>
-  <p>Kafka y Keycloak vía Helm (cada uno <code>--wait</code>):</p>
+  <p>Kafka and Keycloak via Helm (each with <code>--wait</code>):</p>
 <pre><code><span class="kw">helm</span> upgrade --install kafka helm/kafka --wait --timeout 5m
 <span class="kw">helm</span> upgrade --install keycloak helm/keycloak --wait --timeout 5m</code></pre>
 </section>
 
 <section id="s8">
-  <h2><span class="num">8</span>Deploy de los 6 microservicios</h2>
-  <p>El overlay <code>gke-values.yaml</code> apunta a las rutas de Artifact Registry y baja replicas a 1:</p>
+  <h2><span class="num">8</span>Deploy the 6 microservices</h2>
+  <p>The <code>gke-values.yaml</code> overlay points at the Artifact Registry paths and lowers replicas to 1:</p>
 <pre><code><span class="kw">helm</span> upgrade --install dev-env helm/environments/dev-env <span class="cmt">`</span>
   -f helm/environments/dev-env/gke-values.yaml --timeout 8m</code></pre>
-  <p>Comprobar pods y el LoadBalancer del gateway:</p>
+  <p>Check pods and the gateway LoadBalancer:</p>
 <pre><code><span class="kw">kubectl</span> get pods
 <span class="kw">kubectl</span> get svc gatewayserver keycloak</code></pre>
-  <p>La <code>EXTERNAL-IP</code> del gateway y de keycloak tarda 1-2 min en asignarse.</p>
+  <p>The gateway and keycloak <code>EXTERNAL-IP</code> takes 1-2 min to be assigned.</p>
 </section>
 
 <section id="s9">
-  <h2><span class="num">9</span>Validar end-to-end (Bruno)</h2>
-  <p>Keycloak corre H2 en memoria — cada recreación pierde clientes y roles:</p>
+  <h2><span class="num">9</span>Validate end-to-end (Bruno)</h2>
+  <p>Keycloak runs H2 in memory — every recreation loses clients and roles:</p>
 <pre><code>.\create-keycloak-client.ps1 -ClientId eazybank-callcenter-cc -Roles ACCOUNTS,CARDS,LOANS
-<span class="cmt"># copiar el `secret` que imprime</span></code></pre>
-  <p>En Bruno (colección <code>bruno-collection/</code>):</p>
+<span class="cmt"># copy the `secret` it prints</span></code></pre>
+  <p>In Bruno (collection <code>bruno-collection/</code>):</p>
   <ol>
-    <li>Env <strong>Remote-GKE</strong> → actualizar <code>gatewayUrl</code> y <code>keycloakUrl</code> con las EXTERNAL-IP actuales.</li>
-    <li>Pegar el <code>clientSecret</code>.</li>
-    <li>Correr <code>Auth/Get Token</code> → <code>Accounts/Create</code> → <code>Accounts/Fetch</code> → <code>Accounts/Delete</code>. Deben devolver 200/201.</li>
+    <li>Env <strong>Remote-GKE</strong> → update <code>gatewayUrl</code> and <code>keycloakUrl</code> with the current EXTERNAL-IPs.</li>
+    <li>Paste the <code>clientSecret</code>.</li>
+    <li>Run <code>Auth/Get Token</code> → <code>Accounts/Create</code> → <code>Accounts/Fetch</code> → <code>Accounts/Delete</code>. Should return 200/201.</li>
   </ol>
   <div class="callout">
-    <span class="label">JWT issuer</span> El gateway solo tiene <code>jwk-set-uri</code>
-    (no <code>issuer-uri</code>) → no valida el <code>iss</code>. Vale hacer login
-    contra la IP pública de Keycloak aunque los JWK los lea internamente.
+    <span class="label">JWT issuer</span> The gateway only has <code>jwk-set-uri</code>
+    (no <code>issuer-uri</code>) → it does not validate <code>iss</code>. Logging
+    in against Keycloak's public IP works even though the JWKs are read internally.
   </div>
 </section>
 
 <section id="s10">
-  <h2><span class="num">10</span>Kill switch al terminar</h2>
-  <p>SIEMPRE al terminar. Dos niveles según cuánto vayas a tardar en volver.</p>
+  <h2><span class="num">10</span>Kill switch when done</h2>
+  <p>ALWAYS when done. Two levels depending on how long until you come back.</p>
 
-  <h3>Nivel A — pausa (vuelves en días/semanas)</h3>
-  <p>Solo borra el cluster y los disks huérfanos de PVCs. Se mantiene el repo AR con las imágenes → coste ~$0.06/mes → al recrear te saltas §3 y §4.</p>
+  <h3>Level A — pause (coming back in days/weeks)</h3>
+  <p>Just deletes the cluster and orphan PVC disks. Keeps the AR repo with the images → ~$0.06/month → on recreation you skip §3 and §4.</p>
 <pre><code><span class="kw">gcloud</span> container clusters delete cluster-1 --zone us-central1-a --quiet
 
-<span class="cmt"># Los disks de PVCs (Kafka/Keycloak) NO se borran automaticamente:</span>
+<span class="cmt"># PVC disks (Kafka/Keycloak) are NOT automatically deleted:</span>
 <span class="kw">gcloud</span> compute disks list --format=<span class="str">"value(name,zone)"</span>
-<span class="cmt"># Y para cada uno:</span>
+<span class="cmt"># And for each one:</span>
 <span class="kw">gcloud</span> compute disks delete <span class="str">&lt;PVC-NAME&gt;</span> --zone=us-central1-a --quiet</code></pre>
 
-  <h3>Nivel B — coste $0 (vuelves en meses o quizá nunca)</h3>
-  <p>Además del Nivel A, borra también el repo AR (con todas las imágenes dentro):</p>
+  <h3>Level B — $0 cost (coming back in months, or maybe never)</h3>
+  <p>On top of Level A, also delete the AR repo (with all the images inside):</p>
 <pre><code><span class="kw">gcloud</span> artifacts repositories delete eazybank --location=us-central1 --quiet</code></pre>
   <div class="callout warn">
-    <span class="label">Persiste</span> Nivel B deja APIs habilitadas (gratis) y
-    el IAM binding huérfano — inofensivo. La próxima recreación tiene que ejecutar
-    §3, §4 y §5 de nuevo.
+    <span class="label">Persists</span> Level B leaves enabled APIs (free) and
+    the orphan IAM binding — harmless. The next recreation has to run §3, §4
+    and §5 again.
   </div>
 
-  <h3>Verificar coste $0</h3>
+  <h3>Verify $0 cost</h3>
 <pre><code><span class="kw">gcloud</span> container clusters list
 <span class="kw">gcloud</span> compute disks list
 <span class="kw">gcloud</span> compute addresses list
 <span class="kw">gcloud</span> compute forwarding-rules list
 <span class="kw">gcloud</span> artifacts repositories list --location=us-central1</code></pre>
-  <p>Todo debe salir vacío. Si aparece algo — bórralo.</p>
+  <p>Everything should come back empty. If anything shows up — delete it.</p>
 </section>
 
 <section id="s11">
-  <h2><span class="num">11</span>Troubleshooting rápido</h2>
+  <h2><span class="num">11</span>Quick troubleshooting</h2>
   <table>
     <thead>
-      <tr><th>Síntoma</th><th>Causa</th><th>Fix</th></tr>
+      <tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr>
     </thead>
     <tbody>
       <tr>
-        <td>Pods en <code>ErrImagePull</code>; <code>describe</code> muestra <code>403 fetch oauth token</code></td>
-        <td>Falta IAM binding en la compute SA</td>
-        <td>Aplicar §5. El binding es idempotente</td>
+        <td>Pods in <code>ErrImagePull</code>; <code>describe</code> shows <code>403 fetch oauth token</code></td>
+        <td>Missing IAM binding on the compute SA</td>
+        <td>Apply §5. The binding is idempotent</td>
       </tr>
       <tr>
         <td><code>kubectl</code>: <code>gke-gcloud-auth-plugin not found</code></td>
-        <td>Plugin no en PATH</td>
-        <td>Ver §0 (extend <code>$env:PATH</code>) o PowerShell nueva</td>
+        <td>Plugin not on PATH</td>
+        <td>See §0 (extend <code>$env:PATH</code>) or new PowerShell</td>
       </tr>
       <tr>
-        <td>Keycloak en <code>Pending</code> indefinidamente</td>
-        <td>Cluster con 3 nodos e2-medium — no cabe</td>
-        <td>Recrear con <code>--num-nodes 4</code></td>
+        <td>Keycloak stuck in <code>Pending</code></td>
+        <td>Cluster with 3 e2-medium nodes — doesn't fit</td>
+        <td>Recreate with <code>--num-nodes 4</code></td>
       </tr>
       <tr>
-        <td>Gateway <code>EXTERNAL-IP: &lt;pending&gt;</code> más de 5 min</td>
-        <td>LB de GCP tardando o cuota agotada</td>
-        <td>Esperar. Cuota: <code>gcloud compute forwarding-rules list</code></td>
+        <td>Gateway <code>EXTERNAL-IP: &lt;pending&gt;</code> for more than 5 min</td>
+        <td>GCP LB is slow or quota exhausted</td>
+        <td>Wait. Quota: <code>gcloud compute forwarding-rules list</code></td>
       </tr>
       <tr>
-        <td>Bruno 401 en Accounts</td>
-        <td>Token expiró (~1 min) o Keycloak reinició (H2 en memoria)</td>
-        <td>Re-<code>Auth/Get Token</code>. Si sigue: re-ejecutar <code>create-keycloak-client.ps1</code></td>
+        <td>Bruno 401 on Accounts</td>
+        <td>Token expired (~1 min) or Keycloak restarted (H2 in memory)</td>
+        <td>Re-<code>Auth/Get Token</code>. If it persists: re-run <code>create-keycloak-client.ps1</code></td>
       </tr>
       <tr>
-        <td>Trazas de OpenTelemetry fallando a <code>tempo</code></td>
-        <td>No hay observabilidad desplegada</td>
-        <td>Ignorar — ruido inofensivo</td>
+        <td>OpenTelemetry traces failing to <code>tempo</code></td>
+        <td>No observability deployed</td>
+        <td>Ignore — harmless noise</td>
       </tr>
     </tbody>
   </table>
 </section>
 
 <section id="s12">
-  <h2><span class="num">12</span>Coste aproximado</h2>
+  <h2><span class="num">12</span>Approximate cost</h2>
   <table>
     <thead>
-      <tr><th>Recurso</th><th>Tarifa</th><th>Coste</th></tr>
+      <tr><th>Resource</th><th>Rate</th><th>Cost</th></tr>
     </thead>
     <tbody>
       <tr>
-        <td>Cluster corriendo (4× e2-medium)</td>
-        <td>~$0.03/h por nodo (standard)</td>
+        <td>Running cluster (4× e2-medium)</td>
+        <td>~$0.03/h per node (standard)</td>
         <td><strong>~$0.10/h</strong></td>
       </tr>
       <tr>
         <td>Control plane (zonal)</td>
-        <td>Gratis (free tier del primer cluster)</td>
+        <td>Free (first-cluster free tier)</td>
         <td>$0</td>
       </tr>
       <tr>
         <td>Load Balancers</td>
-        <td>Gratis las primeras 5 forwarding rules</td>
+        <td>Free for the first 5 forwarding rules</td>
         <td>$0</td>
       </tr>
       <tr>
-        <td>Disks PVCs (Kafka/Keycloak)</td>
-        <td>$0.10/GB/mes pd-balanced</td>
-        <td>~$0.20/mes (persisten al borrar cluster — bórralos)</td>
+        <td>PVC disks (Kafka/Keycloak)</td>
+        <td>$0.10/GB/month pd-balanced</td>
+        <td>~$0.20/month (persist after cluster deletion — delete them)</td>
       </tr>
       <tr>
-        <td>Artifact Registry (630 MB con las 6 imágenes)</td>
-        <td>$0.10/GB/mes</td>
-        <td><strong>~$0.06/mes</strong></td>
+        <td>Artifact Registry (630 MB with the 6 images)</td>
+        <td>$0.10/GB/month</td>
+        <td><strong>~$0.06/month</strong></td>
       </tr>
       <tr>
-        <td>APIs habilitadas, IAM bindings</td>
-        <td>Gratis</td>
+        <td>Enabled APIs, IAM bindings</td>
+        <td>Free</td>
         <td>$0</td>
       </tr>
     </tbody>
   </table>
   <div class="callout cost">
-    <span class="label">Regla</span> Si no lo estás usando ahora mismo, aplica el
-    kill switch. Nivel A si vuelves en días. Nivel B si vuelves en meses (o quizá
-    nunca) para bajar a <strong>$0/mes absoluto</strong>.
+    <span class="label">Rule</span> If you're not using it right now, apply the
+    kill switch. Level A if you're back in days. Level B if you're back in months
+    (or maybe never) to drop to <strong>absolute $0/month</strong>.
   </div>
 </section>
 
@@ -547,7 +547,7 @@
 </div>
 
 <footer>
-  Manual GKE — EazyBank Section 17 · Complementa <code>GKE-FROM-SCRATCH.md</code> y <code>HANDOFF.md</code>
+  GKE Manual — EazyBank Section 17 · Companion to <code>GKE-FROM-SCRATCH.md</code> and <code>HANDOFF.md</code>
 </footer>
 
 </body>

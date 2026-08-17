@@ -148,7 +148,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Testcontainers: integracion tests contra MySQL real en Docker -->
+        <!-- Testcontainers: integration tests against a real MySQL in Docker -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-testcontainers</artifactId>
@@ -226,17 +226,17 @@
                     </to>
                 </configuration>
             </plugin>
-            <!-- failsafe recoge las clases *IT en la fase integration-test (dentro de `verify`).
-                 surefire (mvn test) las ignora por convencion; solo failsafe las corre. -->
+            <!-- failsafe picks up *IT classes in the integration-test phase (inside `verify`).
+                 surefire (mvn test) ignores them by convention; only failsafe runs them. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
-                    <!-- DOCKER_HOST: env var real (docker-java la lee del SO, no de system properties).
-                         Apunta al pipe del motor Linux de Docker Desktop; el default `docker_engine`
-                         responde con basura en este equipo y Testcontainers marca los tests como skipped.
-                         api.version: system property de docker-java (no hay env var equivalente).
-                         Sin esto, el motor rechaza con "client version 1.32 is too old, min 1.40". -->
+                    <!-- DOCKER_HOST: real env var (docker-java reads it from the OS, not from system properties).
+                         Points to Docker Desktop's Linux engine pipe; the default `docker_engine`
+                         returns garbage on this machine and Testcontainers marks the tests as skipped.
+                         api.version: docker-java system property (there is no equivalent env var).
+                         Without this, the engine rejects with "client version 1.32 is too old, min 1.40". -->
                     <environmentVariables>
                         <DOCKER_HOST>npipe:////./pipe/docker_engine_linux</DOCKER_HOST>
                     </environmentVariables>

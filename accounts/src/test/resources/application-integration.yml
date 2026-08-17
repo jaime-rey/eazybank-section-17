@@ -1,27 +1,27 @@
-# Perfil "integration" — usado por AccountsRepositoryIT (Testcontainers + MySQL real).
+# "integration" profile — used by AccountsRepositoryIT (Testcontainers + real MySQL).
 #
-# Objetivo: aislar el @SpringBootTest de infra externa (config server, K8s discovery,
-# Kafka real). El datasource lo inyecta @ServiceConnection desde el contenedor MySQL,
-# no se define aquí.
+# Goal: isolate the @SpringBootTest from external infra (config server, K8s discovery,
+# real Kafka). The datasource is injected by @ServiceConnection from the MySQL
+# container, so it is not defined here.
 spring:
   config:
-    # No intentar traer config del configserver externo.
+    # Do not try to pull config from the external configserver.
     import: "optional:configserver:"
   cloud:
     discovery:
-      enabled: false           # sin Spring Cloud discovery
+      enabled: false           # no Spring Cloud discovery
     kubernetes:
       discovery:
-        enabled: false         # sin Kubernetes discovery
+        enabled: false         # no Kubernetes discovery
     function:
-      definition: ""           # desactivar bindings de Spring Cloud Stream
-    # El test binder se activa via @EnableTestBinder en el IT (spring-cloud-stream 5.x
-    # ya no autorregistra el binder; no hay META-INF/spring.binders en el jar).
+      definition: ""           # disable Spring Cloud Stream bindings
+    # The test binder is activated via @EnableTestBinder on the IT (spring-cloud-stream 5.x
+    # no longer auto-registers the binder; there is no META-INF/spring.binders in the jar).
   jpa:
     hibernate:
-      ddl-auto: none           # el schema lo pone schema.sql (fuente unica de verdad)
+      ddl-auto: none           # the schema is provided by schema.sql (single source of truth)
     database-platform: org.hibernate.dialect.MySQLDialect
     show-sql: true
   sql:
     init:
-      mode: always             # ejecutar schema.sql contra el MySQL del contenedor
+      mode: always             # run schema.sql against the container's MySQL

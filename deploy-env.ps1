@@ -1,22 +1,22 @@
 <#
     deploy-env.ps1
-    Despliega uno de los entornos de microservicios (dev-env, qa-env, prod-env).
-    La infraestructura (kafka, keycloak, prometheus, grafana, redis) se despliega
-    aparte con deploy-cluster.ps1; este script solo instala el conjunto de
-    microservicios del entorno elegido.
+    Deploys one of the microservice environments (dev-env, qa-env, prod-env).
+    The infrastructure (kafka, keycloak, prometheus, grafana, redis) is
+    deployed separately by deploy-cluster.ps1; this script only installs the
+    microservice bundle for the chosen environment.
 
-    - Reempaqueta las dependencias (por si eazybank-common cambio).
-    - Elimina el subchart sobrante eurekaserver-0.1.0.tgz si existiera.
-    - Instala/actualiza el release con Helm.
+    - Repackages dependencies (in case eazybank-common changed).
+    - Removes the leftover eurekaserver-0.1.0.tgz subchart if present.
+    - Installs/upgrades the release with Helm.
 
-    Uso (desde la carpeta section_17):
+    Usage (from the section_17 folder):
       .\deploy-env.ps1 -Env dev-env
       .\deploy-env.ps1 -Env qa-env   -Release eazybank-qa   -Namespace qa
       .\deploy-env.ps1 -Env prod-env -Release eazybank-prod -Namespace prod
 
-    IMPORTANTE: no despliegues dos entornos en el MISMO namespace: los deployments
-    se llaman igual (accounts-deployment, etc.) y colisionarian. Usa un namespace
-    distinto por entorno, o desinstala el anterior primero.
+    IMPORTANT: do NOT deploy two environments in the SAME namespace: the
+    deployments share names (accounts-deployment, etc.) and will collide. Use
+    a distinct namespace per environment, or uninstall the previous one first.
 #>
 
 param(
@@ -32,26 +32,26 @@ $root = $PSScriptRoot
 $helm = Join-Path $root "helm"
 if (-not $Release) { $Release = $Env }
 
-# Crear el namespace si no existe
+# Create the namespace if it does not exist
 kubectl get namespace $Namespace *> $null
 if ($LASTEXITCODE -ne 0) { kubectl create namespace $Namespace }
 
-# 1) Refrescar el eazybank-common empaquetado dentro de cada servicio
+# 1) Refresh the packaged eazybank-common inside each service
 $services = @("configserver", "accounts", "cards", "loans", "gatewayserver", "message")
 foreach ($s in $services) {
     Write-Host "== dep update: $s ==" -ForegroundColor DarkCyan
     helm dependency update (Join-Path $helm "eazybank-services\$s")
 }
 
-# 2) Limpiar el subchart de eureka sobrante y reempaquetar el entorno
+# 2) Clean up the leftover eureka subchart and repackage the environment
 $envPath = Join-Path $helm "environments\$Env"
 Remove-Item (Join-Path $envPath "charts\eurekaserver-0.1.0.tgz") -ErrorAction SilentlyContinue
 Write-Host "== dep update: $Env ==" -ForegroundColor DarkCyan
 helm dependency update $envPath
 
-# 3) Instalar el entorno
-Write-Host "== Desplegando $Env como release '$Release' en namespace '$Namespace' ==" -ForegroundColor Green
+# 3) Install the environment
+Write-Host "== Deploying $Env as release '$Release' in namespace '$Namespace' ==" -ForegroundColor Green
 helm upgrade --install $Release $envPath -n $Namespace --timeout 8m
 
 kubectl get pods -n $Namespace
-Write-Host "`nListo." -ForegroundColor Green
+Write-Host "`nDone." -ForegroundColor Green

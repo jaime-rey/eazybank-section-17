@@ -1,25 +1,25 @@
 <#
     deploy-cluster.ps1
-    Despliega en el Kubernetes de Docker Desktop toda la infraestructura
-    (Kafka, Keycloak, Prometheus, Grafana, Redis + observabilidad opcional) y
-    los microservicios de EazyBank usando los Helm charts del repo, con tag :s17.
+    Deploys the full infrastructure (Kafka, Keycloak, Prometheus, Grafana, Redis
+    + optional observability) and the EazyBank microservices on Docker Desktop's
+    Kubernetes using the repo's Helm charts, tagged :s17.
 
-    Todo queda configurado en los charts (sin parches manuales):
-      - Tag s17 fijado en cada values.yaml de servicio
-      - eurekaserver eliminado (se usa el discovery server nativo de K8s)
-      - URL del discovery server inyectada via global.discoveryServerURL
-      - Redis desplegado y conectado al gateway (rate limiting)
-      - Keycloak con 2Gi de memoria (evita OOMKilled)
-      - H2 server compartido (evita split-brain con replicas > 1)
+    Everything is configured in the charts (no manual patches):
+      - s17 tag pinned in each service values.yaml
+      - eurekaserver removed (the native K8s discovery server is used)
+      - Discovery server URL injected via global.discoveryServerURL
+      - Redis deployed and wired to the gateway (rate limiting)
+      - Keycloak with 2Gi memory (avoids OOMKilled)
+      - Shared H2 server (avoids split-brain with replicas > 1)
 
-    Requisitos:
-      - Docker Desktop con Kubernetes habilitado
-      - kubectl y helm instalados
-      - Imagenes s17 ya construidas (ejecuta primero .\build-images-s17.ps1)
+    Prerequisites:
+      - Docker Desktop with Kubernetes enabled
+      - kubectl and helm installed
+      - s17 images already built (run .\build-images-s17.ps1 first)
 
-    Uso (desde la carpeta section_17):
+    Usage (from the section_17 folder):
       .\deploy-cluster.ps1
-      .\deploy-cluster.ps1 -WithObservability   # ademas loki, tempo, alloy
+      .\deploy-cluster.ps1 -WithObservability   # also loki, tempo, alloy
 #>
 
 param(
@@ -33,16 +33,16 @@ $helm  = Join-Path $root "helm"
 
 function Assert-Ctx {
     $ctx = (kubectl config current-context).Trim()
-    Write-Host "Contexto kubectl: $ctx" -ForegroundColor Cyan
+    Write-Host "kubectl context: $ctx" -ForegroundColor Cyan
     if ($ctx -ne "docker-desktop") {
-        throw "Contexto '$ctx' != docker-desktop. Ejecuta: kubectl config use-context docker-desktop"
+        throw "Context '$ctx' != docker-desktop. Run: kubectl config use-context docker-desktop"
     }
 }
 
 Assert-Ctx
 
-# --- 1. INFRAESTRUCTURA -----------------------------------------------------
-# Los nombres de release importan: los servicios resuelven por DNS fijo.
+# --- 1. INFRASTRUCTURE ------------------------------------------------------
+# Release names matter: services resolve by fixed DNS.
 
 Write-Host "`n== Kafka ==" -ForegroundColor Green
 helm upgrade --install kafka (Join-Path $helm "kafka") -n $Namespace --wait --timeout 5m
@@ -56,11 +56,11 @@ helm upgrade --install kube-prometheus (Join-Path $helm "kube-prometheus") -n $N
 Write-Host "`n== Grafana ==" -ForegroundColor Green
 helm upgrade --install grafana (Join-Path $helm "grafana") -n $Namespace --wait --timeout 5m
 
-Write-Host "`n== Redis (rate limiting del gateway) ==" -ForegroundColor Green
+Write-Host "`n== Redis (gateway rate limiting) ==" -ForegroundColor Green
 kubectl apply -f (Join-Path $root "redis.yaml") -n $Namespace
 kubectl rollout status deployment/redis -n $Namespace --timeout=120s
 
-Write-Host "`n== H2 server (BD compartida para accounts/cards/loans) ==" -ForegroundColor Green
+Write-Host "`n== H2 server (shared DB for accounts/cards/loans) ==" -ForegroundColor Green
 kubectl apply -f (Join-Path $root "h2-server.yaml") -n $Namespace
 kubectl rollout status deployment/h2 -n $Namespace --timeout=120s
 
@@ -76,9 +76,9 @@ if ($WithObservability) {
     }
 }
 
-# --- 2. REEMPAQUETAR CHARTS DE MICROSERVICIOS -------------------------------
-# eazybank-common cambio (discovery URL + redis), asi que hay que regenerar
-# el .tgz de cada servicio y luego el del umbrella dev-env.
+# --- 2. REPACKAGE MICROSERVICE CHARTS ---------------------------------------
+# eazybank-common changed (discovery URL + redis), so each service .tgz has to
+# be regenerated, and then the dev-env umbrella one.
 
 $services = @("configserver","accounts","cards","loans","gatewayserver","message")
 foreach ($s in $services) {
@@ -87,16 +87,16 @@ foreach ($s in $services) {
 }
 
 $devEnv = Join-Path $helm "environments\dev-env"
-# Quitar el subchart de eureka sobrante si existiera (Helm carga todo .tgz de charts/)
+# Remove the leftover eureka subchart if present (Helm loads every .tgz under charts/)
 Remove-Item (Join-Path $devEnv "charts\eurekaserver-0.1.0.tgz") -ErrorAction SilentlyContinue
 Write-Host "`n== dep update: dev-env ==" -ForegroundColor DarkCyan
 helm dependency update $devEnv
 
-# --- 3. MICROSERVICIOS ------------------------------------------------------
-Write-Host "`n== Microservicios EazyBank (tag s17) ==" -ForegroundColor Green
-Write-Host "NOTA: algunos pods reiniciaran hasta que configserver este listo (normal)." -ForegroundColor Yellow
+# --- 3. MICROSERVICES -------------------------------------------------------
+Write-Host "`n== EazyBank microservices (s17 tag) ==" -ForegroundColor Green
+Write-Host "NOTE: some pods will restart until configserver is ready (normal)." -ForegroundColor Yellow
 helm upgrade --install dev-env $devEnv -n $Namespace --timeout 8m
 
-Write-Host "`n== Estado del cluster ==" -ForegroundColor Cyan
+Write-Host "`n== Cluster status ==" -ForegroundColor Cyan
 kubectl get pods -n $Namespace
-Write-Host "`nListo. Accesos y verificacion en DEPLOY-README.md" -ForegroundColor Green
+Write-Host "`nDone. Access and verification in DEPLOY-README.md" -ForegroundColor Green
