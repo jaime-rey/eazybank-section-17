@@ -118,8 +118,8 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
-			<!-- Override bcprov transitiva de spring-cloud-starter (1.81 -> CVE-2026-0636, LDAP injection en LDAPStoreHelper).
-				 No usamos LDAP en bcprov; fix upstream esperado en Spring Cloud 2025.1.1+. -->
+			<!-- Override for bcprov, transitive from spring-cloud-starter (1.81 -> CVE-2026-0636, LDAP injection in LDAPStoreHelper).
+				 LDAP is not used from bcprov; upstream fix expected in Spring Cloud 2025.1.1+. -->
 			<dependency>
 				<groupId>org.bouncycastle</groupId>
 				<artifactId>bcprov-jdk18on</artifactId>

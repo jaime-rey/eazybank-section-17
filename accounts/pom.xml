@@ -187,22 +187,22 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <!-- Override commons-compress transitiva de testcontainers 1.21.3 (1.24.0 -> CVE-2024-25710, CVE-2024-26308).
-                 Upstream no ha parcheado la linea 1.x (issue testcontainers-java #10265). Test-scope only. -->
+            <!-- Override for commons-compress, transitive from testcontainers 1.21.3 (1.24.0 -> CVE-2024-25710, CVE-2024-26308).
+                 Upstream has not patched the 1.x line (testcontainers-java issue #10265). Test-scope only. -->
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
                 <version>1.27.1</version>
             </dependency>
-            <!-- Override commons-fileupload transitiva de feign-form (1.5 -> CVE-2025-48976, DoS multipart).
-                 Spring Cloud OpenFeign issue #1221 sigue abierto. -->
+            <!-- Override for commons-fileupload, transitive from feign-form (1.5 -> CVE-2025-48976, multipart DoS).
+                 Spring Cloud OpenFeign issue #1221 still open. -->
             <dependency>
                 <groupId>commons-fileupload</groupId>
                 <artifactId>commons-fileupload</artifactId>
                 <version>1.6.0</version>
             </dependency>
-            <!-- Override bcprov transitiva de spring-cloud-starter (1.81 -> CVE-2026-0636, LDAP injection en LDAPStoreHelper).
-                 No usamos LDAP en bcprov; fix upstream esperado en Spring Cloud 2025.1.1+. -->
+            <!-- Override for bcprov, transitive from spring-cloud-starter (1.81 -> CVE-2026-0636, LDAP injection in LDAPStoreHelper).
+                 LDAP is not used from bcprov; upstream fix expected in Spring Cloud 2025.1.1+. -->
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
