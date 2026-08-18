@@ -2,7 +2,6 @@ package com.eazybytes.gatewayserver.filters;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.annotation.Order;
@@ -17,8 +16,11 @@ public class RequestTraceFilter implements GlobalFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(RequestTraceFilter.class);
 
-    @Autowired
-    FilterUtility filterUtility;
+    private final FilterUtility filterUtility;
+
+    public RequestTraceFilter(FilterUtility filterUtility) {
+        this.filterUtility = filterUtility;
+    }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
