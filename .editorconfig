@@ -1,0 +1,35 @@
+# EditorConfig - https://EditorConfig.org
+# Enforces consistent formatting across IDEs (IntelliJ, VS Code, Eclipse).
+
+root = true
+
+# Defaults for every file
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Java - matches the existing project convention
+[*.java]
+indent_size = 4
+max_line_length = 120
+
+# YAML (Spring Boot application.yml) - 2 spaces is idiomatic
+[*.{yml,yaml}]
+indent_size = 2
+
+# XML (pom.xml), JSON, HTML, JS, TS, CSS - 2 spaces
+[*.{xml,json,html,js,ts,css}]
+indent_size = 2
+
+# Markdown - trailing spaces are meaningful (line break), don't trim
+[*.md]
+indent_size = 2
+trim_trailing_whitespace = false
+
+# Windows batch and PowerShell - CRLF required
+[*.{bat,cmd,ps1,psm1}]
+end_of_line = crlf
