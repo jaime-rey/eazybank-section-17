@@ -13,10 +13,14 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @ControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -70,6 +74,23 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 LocalDateTime.now()
         );
         return new ResponseEntity<>(errorResponseDTO, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, String>> handleConstraintViolation(
+        ConstraintViolationException ex, WebRequest webRequest) {
+
+        Map<String, String> validationErrors = new HashMap<>();
+        Set<ConstraintViolation<?>> validationErrorList = ex.getConstraintViolations();
+
+        validationErrorList.forEach((error) -> {
+            String path = error.getPropertyPath().toString();
+            String fieldName = path.substring(path.lastIndexOf('.') + 1);
+            String validationMsg = error.getMessage();
+            validationErrors.put(fieldName, validationMsg);
+        });
+
+        return new ResponseEntity<>(validationErrors, HttpStatus.BAD_REQUEST);
     }
 
 }
