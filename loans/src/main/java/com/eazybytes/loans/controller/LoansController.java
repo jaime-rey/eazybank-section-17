@@ -14,10 +14,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -41,20 +39,20 @@ public class LoansController {
 
     private static final Logger logger = LoggerFactory.getLogger(LoansController.class);
 
-    private ILoansService iLoansService;
+    private final ILoansService iLoansService;
+    private final Environment environment;
+    private final LoansContactInfoDto loansContactInfoDto;
 
-    public LoansController(ILoansService iLoansService) {
+    public LoansController(ILoansService iLoansService,
+                           Environment environment,
+                           LoansContactInfoDto loansContactInfoDto) {
         this.iLoansService = iLoansService;
+        this.environment = environment;
+        this.loansContactInfoDto = loansContactInfoDto;
     }
 
     @Value("${build.version:1.0}")
     private String buildVersion;
-
-    @Autowired
-    private Environment environment;
-
-    @Autowired
-    private LoansContactInfoDto loansContactInfoDto;
 
     @Operation(
             summary = "Create Loan REST API",
