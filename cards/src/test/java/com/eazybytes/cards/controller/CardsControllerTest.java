@@ -14,9 +14,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static org.mockito.Mockito.doThrow;
+
 import com.eazybytes.cards.constants.CardsConstants;
 import com.eazybytes.cards.dto.CardsContactInfoDto;
 import com.eazybytes.cards.dto.CardsDto;
+import com.eazybytes.cards.exception.CardAlreadyExistsException;
+import com.eazybytes.cards.exception.ResourceNotFoundException;
 import com.eazybytes.cards.service.ICardsService;
 import java.util.List;
 import java.util.Map;
@@ -212,6 +216,55 @@ class CardsControllerTest {
         mockMvc.perform(get("/api/java-version"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("/opt/java/test-21"));
+    }
+
+    @Test
+    @DisplayName("GlobalExceptionHandler: ResourceNotFoundException from the service becomes a 404 with an ErrorResponseDto body")
+    void fetchCard_serviceThrowsResourceNotFound_returns404() throws Exception {
+        when(iCardsService.fetchCard("9999999999"))
+                .thenThrow(new ResourceNotFoundException("Card", "mobileNumber", "9999999999"));
+
+        mockMvc.perform(get("/api/fetch")
+                .header("eazybank-correlation-id", "corr-123")
+                .param("mobileNumber", "9999999999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.apiPath").value("uri=/api/fetch"))
+                .andExpect(jsonPath("$.errorCode").value("404 NOT_FOUND"))
+                .andExpect(jsonPath("$.errorMessage").value(
+                        "Card not found with the given input data mobileNumber : '9999999999'"))
+                .andExpect(jsonPath("$.errorTime").exists());
+    }
+
+    @Test
+    @DisplayName("GlobalExceptionHandler: CardAlreadyExistsException from the service becomes a 400 with an ErrorResponseDto body")
+    void createCard_serviceThrowsAlreadyExists_returns400() throws Exception {
+        doThrow(new CardAlreadyExistsException(
+                "Card already registered with given mobileNumber 9345432123"))
+                .when(iCardsService).createCard("9345432123");
+
+        mockMvc.perform(post("/api/create").param("mobileNumber", "9345432123"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.apiPath").value("uri=/api/create"))
+                .andExpect(jsonPath("$.errorCode").value("400 BAD_REQUEST"))
+                .andExpect(jsonPath("$.errorMessage").value(
+                        "Card already registered with given mobileNumber 9345432123"))
+                .andExpect(jsonPath("$.errorTime").exists());
+    }
+
+    @Test
+    @DisplayName("GlobalExceptionHandler: any other exception from the service becomes a 500 with an ErrorResponseDto body")
+    void fetchCard_serviceThrowsGenericException_returns500() throws Exception {
+        when(iCardsService.fetchCard("9345432123"))
+                .thenThrow(new RuntimeException("database is on fire"));
+
+        mockMvc.perform(get("/api/fetch")
+                .header("eazybank-correlation-id", "corr-123")
+                .param("mobileNumber", "9345432123"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.apiPath").value("uri=/api/fetch"))
+                .andExpect(jsonPath("$.errorCode").value("500 INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.errorMessage").value("database is on fire"))
+                .andExpect(jsonPath("$.errorTime").exists());
     }
 
 }

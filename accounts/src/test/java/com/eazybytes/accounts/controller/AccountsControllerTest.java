@@ -16,6 +16,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.eazybytes.accounts.constants.AccountsConstants;
 import com.eazybytes.accounts.dto.AccountsContactInfoDto;
 import com.eazybytes.accounts.dto.CustomerDto;
+import com.eazybytes.accounts.exception.CustomerAlreadyExistsException;
+import com.eazybytes.accounts.exception.ResourceNotFoundException;
 import com.eazybytes.accounts.service.IAccountsService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -254,5 +256,57 @@ class AccountsControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("Java 21");
+    }
+
+    @Test
+    @DisplayName("GlobalExceptionHandler: ResourceNotFoundException from the service becomes a 404 with an ErrorResponseDto body")
+    void fetchAccount_serviceThrowsResourceNotFound_returns404() throws Exception {
+        when(iAccountsService.fetchAccount("9999999999"))
+                .thenThrow(new ResourceNotFoundException("Customer", "mobileNumber", "9999999999"));
+
+        mockMvc.perform(get("/api/fetch").param("mobileNumber", "9999999999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.apiPath").value("uri=/api/fetch"))
+                .andExpect(jsonPath("$.errorCode").value("404 NOT_FOUND"))
+                .andExpect(jsonPath("$.errorMessage").value(
+                        "Customer not found with the given input data mobileNumber : '9999999999'"))
+                .andExpect(jsonPath("$.errorTime").exists());
+    }
+
+    @Test
+    @DisplayName("GlobalExceptionHandler: CustomerAlreadyExistsException from the service becomes a 400 with an ErrorResponseDto body")
+    void createAccount_serviceThrowsAlreadyExists_returns400() throws Exception {
+        CustomerDto dto = new CustomerDto();
+        dto.setName("Ada Lovelace");
+        dto.setEmail("ada@example.com");
+        dto.setMobileNumber("9345432123");
+
+        doThrow(new CustomerAlreadyExistsException(
+                "Customer already registered with given mobileNumber 9345432123"))
+                .when(iAccountsService).createAccount(any(CustomerDto.class));
+
+        mockMvc.perform(post("/api/create")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.apiPath").value("uri=/api/create"))
+                .andExpect(jsonPath("$.errorCode").value("400 BAD_REQUEST"))
+                .andExpect(jsonPath("$.errorMessage").value(
+                        "Customer already registered with given mobileNumber 9345432123"))
+                .andExpect(jsonPath("$.errorTime").exists());
+    }
+
+    @Test
+    @DisplayName("GlobalExceptionHandler: any other exception from the service becomes a 500 with an ErrorResponseDto body")
+    void fetchAccount_serviceThrowsGenericException_returns500() throws Exception {
+        when(iAccountsService.fetchAccount("9345432123"))
+                .thenThrow(new RuntimeException("database is on fire"));
+
+        mockMvc.perform(get("/api/fetch").param("mobileNumber", "9345432123"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.apiPath").value("uri=/api/fetch"))
+                .andExpect(jsonPath("$.errorCode").value("500 INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.errorMessage").value("database is on fire"))
+                .andExpect(jsonPath("$.errorTime").exists());
     }
 }

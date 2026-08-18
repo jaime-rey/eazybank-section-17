@@ -14,9 +14,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import static org.mockito.Mockito.doThrow;
+
 import com.eazybytes.loans.constants.LoansConstants;
 import com.eazybytes.loans.dto.LoansContactInfoDto;
 import com.eazybytes.loans.dto.LoansDto;
+import com.eazybytes.loans.exception.LoanAlreadyExistsException;
+import com.eazybytes.loans.exception.ResourceNotFoundException;
 import com.eazybytes.loans.service.ILoansService;
 import java.util.List;
 import java.util.Map;
@@ -212,6 +216,55 @@ class LoansControllerTest {
         mockMvc.perform(get("/api/java-version"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("/opt/java/test-21"));
+    }
+
+    @Test
+    @DisplayName("GlobalExceptionHandler: ResourceNotFoundException from the service becomes a 404 with an ErrorResponseDto body")
+    void fetchLoan_serviceThrowsResourceNotFound_returns404() throws Exception {
+        when(iLoansService.fetchLoan("9999999999"))
+                .thenThrow(new ResourceNotFoundException("Loan", "mobileNumber", "9999999999"));
+
+        mockMvc.perform(get("/api/fetch")
+                .header("eazybank-correlation-id", "corr-123")
+                .param("mobileNumber", "9999999999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.apiPath").value("uri=/api/fetch"))
+                .andExpect(jsonPath("$.errorCode").value("404 NOT_FOUND"))
+                .andExpect(jsonPath("$.errorMessage").value(
+                        "Loan not found with the given input data mobileNumber : '9999999999'"))
+                .andExpect(jsonPath("$.errorTime").exists());
+    }
+
+    @Test
+    @DisplayName("GlobalExceptionHandler: LoanAlreadyExistsException from the service becomes a 400 with an ErrorResponseDto body")
+    void createLoan_serviceThrowsAlreadyExists_returns400() throws Exception {
+        doThrow(new LoanAlreadyExistsException(
+                "Loan already registered with given mobileNumber 9345432123"))
+                .when(iLoansService).createLoan("9345432123");
+
+        mockMvc.perform(post("/api/create").param("mobileNumber", "9345432123"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.apiPath").value("uri=/api/create"))
+                .andExpect(jsonPath("$.errorCode").value("400 BAD_REQUEST"))
+                .andExpect(jsonPath("$.errorMessage").value(
+                        "Loan already registered with given mobileNumber 9345432123"))
+                .andExpect(jsonPath("$.errorTime").exists());
+    }
+
+    @Test
+    @DisplayName("GlobalExceptionHandler: any other exception from the service becomes a 500 with an ErrorResponseDto body")
+    void fetchLoan_serviceThrowsGenericException_returns500() throws Exception {
+        when(iLoansService.fetchLoan("9345432123"))
+                .thenThrow(new RuntimeException("database is on fire"));
+
+        mockMvc.perform(get("/api/fetch")
+                .header("eazybank-correlation-id", "corr-123")
+                .param("mobileNumber", "9345432123"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.apiPath").value("uri=/api/fetch"))
+                .andExpect(jsonPath("$.errorCode").value("500 INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.errorMessage").value("database is on fire"))
+                .andExpect(jsonPath("$.errorTime").exists());
     }
 
 }
