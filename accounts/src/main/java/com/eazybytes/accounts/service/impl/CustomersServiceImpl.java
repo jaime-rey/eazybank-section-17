@@ -1,6 +1,5 @@
 package com.eazybytes.accounts.service.impl;
 
-import com.eazybytes.accounts.dto.AccountsDto;
 import com.eazybytes.accounts.dto.CardsDto;
 import com.eazybytes.accounts.dto.CustomerDetailsDto;
 import com.eazybytes.accounts.dto.LoansDto;
@@ -26,6 +25,8 @@ public class CustomersServiceImpl implements ICustomersService {
     private CustomerRepository customerRepository;
     private CardsFeignClient cardsFeignClient;
     private LoansFeignClient loansFeignClient;
+    private AccountsMapper accountsMapper;
+    private CustomerMapper customerMapper;
 
     /**
      * @param mobileNumber - Input Mobile Number
@@ -41,8 +42,8 @@ public class CustomersServiceImpl implements ICustomersService {
                 () -> new ResourceNotFoundException("Account", "customerId", customer.getCustomerId().toString())
         );
 
-        CustomerDetailsDto customerDetailsDto = CustomerMapper.mapToCustomerDetailsDto(customer, new CustomerDetailsDto());
-        customerDetailsDto.setAccountsDto(AccountsMapper.mapToAccountsDto(accounts, new AccountsDto()));
+        CustomerDetailsDto customerDetailsDto = customerMapper.toDetailsDto(customer);
+        customerDetailsDto.setAccountsDto(accountsMapper.toDto(accounts));
 
         ResponseEntity<LoansDto> loansDtoResponseEntity = loansFeignClient.fetchLoanDetails(correlationId, mobileNumber);
         if(null != loansDtoResponseEntity) {

@@ -12,14 +12,17 @@ import com.eazybytes.cards.dto.CardsDto;
 import com.eazybytes.cards.entity.Cards;
 import com.eazybytes.cards.exception.CardAlreadyExistsException;
 import com.eazybytes.cards.exception.ResourceNotFoundException;
+import com.eazybytes.cards.mapper.CardsMapper;
 import com.eazybytes.cards.repository.CardsRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +30,9 @@ class CardsServiceImplTest {
 
     @Mock
     private CardsRepository cardsRepository;
+
+    @Spy
+    private CardsMapper cardsMapper = Mappers.getMapper(CardsMapper.class);
 
     @InjectMocks
     private CardsServiceImpl service;

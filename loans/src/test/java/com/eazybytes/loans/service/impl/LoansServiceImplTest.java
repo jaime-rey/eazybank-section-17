@@ -12,14 +12,17 @@ import com.eazybytes.loans.dto.LoansDto;
 import com.eazybytes.loans.entity.Loans;
 import com.eazybytes.loans.exception.LoanAlreadyExistsException;
 import com.eazybytes.loans.exception.ResourceNotFoundException;
+import com.eazybytes.loans.mapper.LoansMapper;
 import com.eazybytes.loans.repository.LoansRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +30,9 @@ class LoansServiceImplTest {
 
     @Mock
     private LoansRepository loansRepository;
+
+    @Spy
+    private LoansMapper loansMapper = Mappers.getMapper(LoansMapper.class);
 
     @InjectMocks
     private LoansServiceImpl service;

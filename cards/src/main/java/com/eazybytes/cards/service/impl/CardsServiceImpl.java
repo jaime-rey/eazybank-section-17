@@ -19,6 +19,7 @@ import java.util.Random;
 public class CardsServiceImpl implements ICardsService {
 
     private CardsRepository cardsRepository;
+    private CardsMapper cardsMapper;
 
     /**
      * @param mobileNumber - Mobile Number of the Customer
@@ -58,7 +59,7 @@ public class CardsServiceImpl implements ICardsService {
         Cards cards = cardsRepository.findByMobileNumber(mobileNumber).orElseThrow(
                 () -> new ResourceNotFoundException("Card", "mobileNumber", mobileNumber)
         );
-        return CardsMapper.mapToCardsDto(cards, new CardsDto());
+        return cardsMapper.toDto(cards);
     }
 
     /**
@@ -70,7 +71,7 @@ public class CardsServiceImpl implements ICardsService {
     public boolean updateCard(CardsDto cardsDto) {
         Cards cards = cardsRepository.findByCardNumber(cardsDto.getCardNumber()).orElseThrow(
                 () -> new ResourceNotFoundException("Card", "CardNumber", cardsDto.getCardNumber()));
-        CardsMapper.mapToCards(cardsDto, cards);
+        cardsMapper.updateEntity(cardsDto, cards);
         cardsRepository.save(cards);
         return  true;
     }

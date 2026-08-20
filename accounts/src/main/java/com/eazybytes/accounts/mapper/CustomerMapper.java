@@ -3,28 +3,17 @@ package com.eazybytes.accounts.mapper;
 import com.eazybytes.accounts.dto.CustomerDetailsDto;
 import com.eazybytes.accounts.dto.CustomerDto;
 import com.eazybytes.accounts.entity.Customer;
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
 
-public class CustomerMapper {
+@Mapper(componentModel = "spring")
+public interface CustomerMapper {
 
-    public static CustomerDto mapToCustomerDto(Customer customer, CustomerDto customerDto) {
-        customerDto.setName(customer.getName());
-        customerDto.setEmail(customer.getEmail());
-        customerDto.setMobileNumber(customer.getMobileNumber());
-        return customerDto;
-    }
+    CustomerDto toDto(Customer customer);
 
-    public static CustomerDetailsDto mapToCustomerDetailsDto(Customer customer, CustomerDetailsDto customerDetailsDto) {
-        customerDetailsDto.setName(customer.getName());
-        customerDetailsDto.setEmail(customer.getEmail());
-        customerDetailsDto.setMobileNumber(customer.getMobileNumber());
-        return customerDetailsDto;
-    }
+    CustomerDetailsDto toDetailsDto(Customer customer);
 
-    public static Customer mapToCustomer(CustomerDto customerDto, Customer customer) {
-        customer.setName(customerDto.getName());
-        customer.setEmail(customerDto.getEmail());
-        customer.setMobileNumber(customerDto.getMobileNumber());
-        return customer;
-    }
+    Customer toEntity(CustomerDto customerDto);
 
+    void updateEntity(CustomerDto customerDto, @MappingTarget Customer customer);
 }

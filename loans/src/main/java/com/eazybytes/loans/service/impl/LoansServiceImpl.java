@@ -19,6 +19,7 @@ import java.util.Random;
 public class LoansServiceImpl implements ILoansService {
 
     private LoansRepository loansRepository;
+    private LoansMapper loansMapper;
 
     /**
      * @param mobileNumber - Mobile Number of the Customer
@@ -58,7 +59,7 @@ public class LoansServiceImpl implements ILoansService {
         Loans loans = loansRepository.findByMobileNumber(mobileNumber).orElseThrow(
                 () -> new ResourceNotFoundException("Loan", "mobileNumber", mobileNumber)
         );
-        return LoansMapper.mapToLoansDto(loans, new LoansDto());
+        return loansMapper.toDto(loans);
     }
 
     /**
@@ -70,7 +71,7 @@ public class LoansServiceImpl implements ILoansService {
     public boolean updateLoan(LoansDto loansDto) {
         Loans loans = loansRepository.findByLoanNumber(loansDto.getLoanNumber()).orElseThrow(
                 () -> new ResourceNotFoundException("Loan", "LoanNumber", loansDto.getLoanNumber()));
-        LoansMapper.mapToLoans(loansDto, loans);
+        loansMapper.updateEntity(loansDto, loans);
         loansRepository.save(loans);
         return  true;
     }

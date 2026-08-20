@@ -6,6 +6,8 @@ import com.eazybytes.accounts.dto.LoansDto;
 import com.eazybytes.accounts.entity.Accounts;
 import com.eazybytes.accounts.entity.Customer;
 import com.eazybytes.accounts.exception.ResourceNotFoundException;
+import com.eazybytes.accounts.mapper.AccountsMapper;
+import com.eazybytes.accounts.mapper.CustomerMapper;
 import com.eazybytes.accounts.repository.AccountsRepository;
 import com.eazybytes.accounts.repository.CustomerRepository;
 import com.eazybytes.accounts.service.client.CardsFeignClient;
@@ -13,8 +15,10 @@ import com.eazybytes.accounts.service.client.LoansFeignClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
@@ -31,6 +35,8 @@ class CustomersServiceImplTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private CardsFeignClient cardsFeignClient;
     @Mock private LoansFeignClient loansFeignClient;
+    @Spy private AccountsMapper accountsMapper = Mappers.getMapper(AccountsMapper.class);
+    @Spy private CustomerMapper customerMapper = Mappers.getMapper(CustomerMapper.class);
 
     @InjectMocks
     private CustomersServiceImpl service;

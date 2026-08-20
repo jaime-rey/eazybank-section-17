@@ -7,14 +7,18 @@ import com.eazybytes.accounts.entity.Accounts;
 import com.eazybytes.accounts.entity.Customer;
 import com.eazybytes.accounts.exception.CustomerAlreadyExistsException;
 import com.eazybytes.accounts.exception.ResourceNotFoundException;
+import com.eazybytes.accounts.mapper.AccountsMapper;
+import com.eazybytes.accounts.mapper.CustomerMapper;
 import com.eazybytes.accounts.repository.AccountsRepository;
 import com.eazybytes.accounts.repository.CustomerRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.stream.function.StreamBridge;
 
@@ -34,6 +38,8 @@ class AccountsServiceImplTest {
     @Mock private AccountsRepository accountsRepository;
     @Mock private CustomerRepository customerRepository;
     @Mock private StreamBridge streamBridge;
+    @Spy private AccountsMapper accountsMapper = Mappers.getMapper(AccountsMapper.class);
+    @Spy private CustomerMapper customerMapper = Mappers.getMapper(CustomerMapper.class);
 
     @InjectMocks
     private AccountsServiceImpl service;
