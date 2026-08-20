@@ -148,7 +148,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Testcontainers: integracion tests contra MySQL real en Docker -->
+        <!-- Testcontainers: integración tests contra MySQL real en Docker -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-testcontainers</artifactId>
@@ -188,7 +188,7 @@
                 <scope>import</scope>
             </dependency>
             <!-- Override commons-compress transitiva de testcontainers 1.21.3 (1.24.0 -> CVE-2024-25710, CVE-2024-26308).
-                 Upstream no ha parcheado la linea 1.x (issue testcontainers-java #10265). Test-scope only. -->
+                 Upstream no ha parcheado la línea 1.x (issue testcontainers-java #10265). Test-scope only. -->
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
@@ -241,7 +241,7 @@
                 </configuration>
             </plugin>
             <!-- failsafe recoge las clases *IT en la fase integration-test (dentro de `verify`).
-                 surefire (mvn test) las ignora por convencion; solo failsafe las corre. -->
+                 surefire (mvn test) las ignora por convención; solo failsafe las corre. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
