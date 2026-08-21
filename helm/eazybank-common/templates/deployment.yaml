@@ -90,7 +90,7 @@ spec:
         {{- end }}
         {{- if .Values.h2_enabled }}
         - name: SPRING_DATASOURCE_URL
-          value: {{ printf "jdbc:h2:tcp://%s:%v/mem:%s" (.Values.global.h2Host | default "h2") (.Values.global.h2Port | default 1521) .Values.h2_dbName | quote }}
+          value: {{ printf "jdbc:h2:tcp://%s:%v/mem:%s;DB_CLOSE_DELAY=-1" (.Values.global.h2Host | default "h2") (.Values.global.h2Port | default 1521) .Values.h2_dbName | quote }}
         {{- end }}
 
 {{- end -}}
