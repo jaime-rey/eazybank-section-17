@@ -48,11 +48,8 @@ spec:
               key: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI
         {{- end }}
         {{- if .Values.otel_enabled }}
-        - name: JAVA_TOOL_OPTIONS
-          valueFrom: 
-            configMapKeyRef:
-              name: {{ .Values.global.configMapName }}
-              key: JAVA_TOOL_OPTIONS
+        # JAVA_TOOL_OPTIONS ya no se define aqui: viene estampado en la imagen
+        # por jib-maven-plugin (single source of truth = pom.xml de cada micro).
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           valueFrom: 
             configMapKeyRef:

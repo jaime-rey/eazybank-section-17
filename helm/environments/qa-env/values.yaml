@@ -8,7 +8,6 @@ global:
   h2Host: h2.default.svc.cluster.local
   h2Port: "1521"
   keyCloakURL: http://keycloak.default.svc.cluster.local:80/realms/master/protocol/openid-connect/certs
-  openTelemetryJavaAgent: "-javaagent:/app/libs/opentelemetry-javaagent-2.22.0.jar"
   otelExporterEndPoint: http://tempo.default.svc.cluster.local:4318
   otelMetricsExporter: none
   otelLogsExporter: none

@@ -177,6 +177,13 @@
                     <to>
                         <image>eazybytes/${project.artifactId}:s17</image>
                     </to>
+                    <container>
+                        <environment>
+                            <!-- Punto unico de verdad para la ruta del OTel javaagent:
+                                 la version se resuelve de ${otelVersion} del pom en build-time. -->
+                            <JAVA_TOOL_OPTIONS>-javaagent:/app/libs/opentelemetry-javaagent-${otelVersion}.jar</JAVA_TOOL_OPTIONS>
+                        </environment>
+                    </container>
                 </configuration>
             </plugin>
             <!-- JaCoCo: measure unit + integration coverage. Report at target/site/jacoco/index.html.

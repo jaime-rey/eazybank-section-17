@@ -7,7 +7,9 @@ data:
   SPRING_PROFILES_ACTIVE: {{ .Values.global.activeProfile }}
   SPRING_CONFIG_IMPORT: {{ .Values.global.configServerURL }}
   SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI: {{ .Values.global.keyCloakURL }}
-  JAVA_TOOL_OPTIONS: {{ .Values.global.openTelemetryJavaAgent }}
+  # JAVA_TOOL_OPTIONS ahora se estampa en la imagen via jib-maven-plugin (ver pom.xml
+  # de cada micro con OTel javaagent). Aqui ya no se declara — evita el drift entre
+  # la version del jar en la imagen y la ruta inyectada por K8s.
   OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.global.otelExporterEndPoint }}
   OTEL_METRICS_EXPORTER: {{ .Values.global.otelMetricsExporter }}
   OTEL_LOGS_EXPORTER: {{ .Values.global.otelLogsExporter }}
