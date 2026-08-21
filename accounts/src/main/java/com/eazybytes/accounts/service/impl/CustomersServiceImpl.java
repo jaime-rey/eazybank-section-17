@@ -16,6 +16,7 @@ import com.eazybytes.accounts.service.client.LoansFeignClient;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @AllArgsConstructor
@@ -45,16 +46,25 @@ public class CustomersServiceImpl implements ICustomersService {
         CustomerDetailsDto customerDetailsDto = customerMapper.toDetailsDto(customer);
         customerDetailsDto.setAccountsDto(accountsMapper.toDto(accounts));
 
-        ResponseEntity<LoansDto> loansDtoResponseEntity = loansFeignClient.fetchLoanDetails(correlationId, mobileNumber);
+        CompletableFuture<ResponseEntity<LoansDto>> loansFuturo = CompletableFuture.supplyAsync(
+            () -> loansFeignClient.fetchLoanDetails(correlationId, mobileNumber)
+        );
+
+        CompletableFuture<ResponseEntity<CardsDto>> cardsFuturo = CompletableFuture.supplyAsync(
+            () -> cardsFeignClient.fetchCardDetails(correlationId, mobileNumber)
+        );
+
+        CompletableFuture.allOf(loansFuturo, cardsFuturo).join();
+
+        ResponseEntity<LoansDto> loansDtoResponseEntity  = loansFuturo.join();
         if(null != loansDtoResponseEntity) {
             customerDetailsDto.setLoansDto(loansDtoResponseEntity.getBody());
         }
 
-        ResponseEntity<CardsDto> cardsDtoResponseEntity = cardsFeignClient.fetchCardDetails(correlationId, mobileNumber);
+        ResponseEntity<CardsDto> cardsDtoResponseEntity = cardsFuturo.join();
         if(null != cardsDtoResponseEntity) {
             customerDetailsDto.setCardsDto(cardsDtoResponseEntity.getBody());
         }
-
 
         return customerDetailsDto;
 
