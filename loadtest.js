@@ -5,33 +5,33 @@ const URL = 'http://localhost:8072/eazybank/accounts/api/fetchCustomerDetails?mo
 
 export const options = {
   scenarios: {
-    // Fase 1: calentamiento. Abre conexiones, deja que la JVM y los pools
-    // se "calienten". Sus resultados NO cuentan en los thresholds finales.
-    calentamiento: {
+    // Phase 1: warm-up. Opens connections, lets the JVM and pools get
+    // "warm". Its results do NOT count towards the final thresholds.
+    warmup: {
       executor: 'constant-vus',
       vus: 10,
       duration: '10s',
-      exec: 'peticion',
+      exec: 'request',
     },
-    // Fase 2: medición real. Arranca DESPUÉS del calentamiento (startTime),
-    // con el mismo patrón que ya tenías (10 VUs, 100 iteraciones).
-    medicion: {
+    // Phase 2: real measurement. Starts AFTER warm-up (startTime),
+    // with the same pattern as before (10 VUs, 100 iterations).
+    measurement: {
       executor: 'per-vu-iterations',
       vus: 10,
-      iterations: 10, // 10 VUs x 10 iteraciones = 100 iteraciones totales, igual que antes
+      iterations: 10, // 10 VUs x 10 iterations = 100 total iterations
       startTime: '10s',
-      exec: 'peticion',
+      exec: 'request',
     },
   },
   thresholds: {
-    // OJO: aplicamos el threshold SOLO al escenario de medición,
-    // para que el calentamiento no lo contamine.
-    'http_req_failed{scenario:medicion}': ['rate<0.01'],
-    'http_req_duration{scenario:medicion}': ['p(95)<500'],
+    // NOTE: thresholds apply ONLY to the measurement scenario, so the
+    // warm-up phase cannot contaminate the pass/fail result.
+    'http_req_failed{scenario:measurement}': ['rate<0.01'],
+    'http_req_duration{scenario:measurement}': ['p(95)<500'],
   },
 };
 
-export function peticion() {
+export function request() {
   const res = http.get(URL, {
     headers: { 'eazybank-correlation-id': `k6-${__VU}-${__ITER}` },
   });
