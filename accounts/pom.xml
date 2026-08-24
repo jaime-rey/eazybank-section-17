@@ -264,6 +264,17 @@
                     </container>
                 </configuration>
             </plugin>
+            <!-- surefire: unit tests (*Test). @{argLine} preserves JaCoCo's javaagent;
+                 the mockito-core agent silences the JDK 21+ dynamic-agent-loading warning
+                 and future-proofs the build (self-attach will be disallowed in a future JDK). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+                </configuration>
+            </plugin>
+
             <!-- failsafe recoge las clases *IT en la fase integration-test (dentro de `verify`).
                  surefire (mvn test) las ignora por convención; solo failsafe las corre. -->
             <plugin>
@@ -275,6 +286,7 @@
                          responde con basura en este equipo y Testcontainers marca los tests como skipped.
                          api.version: system property de docker-java (no hay env var equivalente).
                          Sin esto, el motor rechaza con "client version 1.32 is too old, min 1.40". -->
+                    <argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
                     <environmentVariables>
                         <DOCKER_HOST>npipe:////./pipe/docker_engine_linux</DOCKER_HOST>
                     </environmentVariables>
