@@ -7,8 +7,10 @@ import lombok.*;
 @Getter @Setter @ToString @AllArgsConstructor @NoArgsConstructor
 public class Accounts extends  BaseEntity {
 
-    @Column(name="customer_id")
-    private Long customerId;
+    @ToString.Exclude
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

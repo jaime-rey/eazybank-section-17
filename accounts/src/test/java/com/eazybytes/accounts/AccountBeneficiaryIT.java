@@ -20,6 +20,9 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import com.eazybytes.accounts.entity.Customer;
+import com.eazybytes.accounts.repository.CustomerRepository;
+
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -39,6 +42,7 @@ class AccountBeneficiaryIT {
     @Autowired private AccountsRepository accountsRepository;
     @Autowired private BeneficiaryRepository beneficiaryRepository;
     @Autowired private AccountBeneficiaryRepository accountBeneficiaryRepository;
+    @Autowired private CustomerRepository customerRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -103,7 +107,10 @@ class AccountBeneficiaryIT {
     // account numbers so tests can query by them. Each test runs in its own
     // @Transactional that rolls back on completion.
     private List<Long> seedData() {
-        List<Accounts> accounts = List.of(newAccount(), newAccount(), newAccount());
+        Customer owner = newCustomer();
+        customerRepository.save(owner);
+
+        List<Accounts> accounts = List.of(newAccount(owner), newAccount(owner), newAccount(owner));
         accountsRepository.saveAll(accounts);
 
         List<Beneficiary> people = List.of(
@@ -132,9 +139,9 @@ class AccountBeneficiaryIT {
         return accounts.stream().map(Accounts::getAccountNumber).toList();
     }
 
-    private static Accounts newAccount() {
+    private static Accounts newAccount(Customer owner) {
         Accounts a = new Accounts();
-        a.setCustomerId(ThreadLocalRandom.current().nextLong(1, 10_000));
+        a.setCustomer(owner);
         a.setAccountType("Savings");
         a.setBranchAddress("123 Test St");
         a.setCommunicationSw(false);
@@ -146,5 +153,13 @@ class AccountBeneficiaryIT {
         b.setDocumentNumber(doc);
         b.setFullName(fullName);
         return b;
+    }
+
+    private static Customer newCustomer() {
+        Customer c = new Customer();
+        c.setName("Test Owner");
+        c.setEmail("owner-" + ThreadLocalRandom.current().nextLong(1, 1_000_000) + "@example.com");
+        c.setMobileNumber(String.format("9%09d", ThreadLocalRandom.current().nextLong(0, 1_000_000_000)));
+        return c;
     }
 }

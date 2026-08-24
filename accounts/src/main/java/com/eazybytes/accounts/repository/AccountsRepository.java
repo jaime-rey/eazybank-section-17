@@ -9,10 +9,13 @@ import java.util.Optional;
 
 public interface AccountsRepository extends JpaRepository<Accounts, Long> {
 
-    Optional<Accounts> findByCustomerId(Long customerId);
+    // Underscore separates navigation from property name:
+    // Customer_CustomerId → navigate `customer`, then read `customerId`.
+
+    Optional<Accounts> findByCustomer_CustomerId(Long customerId);
 
     @Transactional
     @Modifying
-    void deleteByCustomerId(Long customerId);
+    void deleteByCustomer_CustomerId(Long customerId);
 
 }

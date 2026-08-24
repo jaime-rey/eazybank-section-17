@@ -63,7 +63,7 @@ class AccountsServiceImplTest {
         when(customerRepository.save(any(Customer.class))).thenReturn(savedCustomer);
         Accounts savedAccount = new Accounts();
         savedAccount.setAccountNumber(1234567890L);
-        savedAccount.setCustomerId(42L);
+        savedAccount.setCustomer(savedCustomer);
         when(accountsRepository.save(any(Accounts.class))).thenReturn(savedAccount);
 
         service.createAccount(dto);
@@ -110,10 +110,10 @@ class AccountsServiceImplTest {
         account.setAccountNumber(1234567890L);
         account.setAccountType("Savings");
         account.setBranchAddress("123 Main St");
-        account.setCustomerId(42L);
+        account.setCustomer(customer);
 
         when(customerRepository.findByMobileNumber("9345432123")).thenReturn(Optional.of(customer));
-        when(accountsRepository.findByCustomerId(42L)).thenReturn(Optional.of(account));
+        when(accountsRepository.findByCustomer_CustomerId(42L)).thenReturn(Optional.of(account));
 
         CustomerDto result = service.fetchAccount("9345432123");
 
@@ -144,7 +144,7 @@ class AccountsServiceImplTest {
         Customer customer = new Customer();
         customer.setCustomerId(42L);
         when(customerRepository.findByMobileNumber("9345432123")).thenReturn(Optional.of(customer));
-        when(accountsRepository.findByCustomerId(42L)).thenReturn(Optional.empty());
+        when(accountsRepository.findByCustomer_CustomerId(42L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.fetchAccount("9345432123"))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -168,15 +168,14 @@ class AccountsServiceImplTest {
         customerDto.setMobileNumber("9345432123");
         customerDto.setAccountsDto(accountsDto);
 
-        Accounts existingAccount = new Accounts();
-        existingAccount.setAccountNumber(1234567890L);
-        existingAccount.setCustomerId(42L);
         Customer existingCustomer = new Customer();
         existingCustomer.setCustomerId(42L);
+        Accounts existingAccount = new Accounts();
+        existingAccount.setAccountNumber(1234567890L);
+        existingAccount.setCustomer(existingCustomer);
 
         when(accountsRepository.findById(1234567890L)).thenReturn(Optional.of(existingAccount));
         when(accountsRepository.save(any(Accounts.class))).thenReturn(existingAccount);
-        when(customerRepository.findById(42L)).thenReturn(Optional.of(existingCustomer));
         when(customerRepository.save(any(Customer.class))).thenReturn(existingCustomer);
 
         boolean updated = service.updateAccount(customerDto);
@@ -215,27 +214,6 @@ class AccountsServiceImplTest {
                 .hasMessageContaining("9999");
     }
 
-    @Test
-    @DisplayName("updateAccount: throws ResourceNotFoundException when the linked customer is not found")
-    void updateAccount_customerNotFound() {
-        AccountsDto accountsDto = new AccountsDto();
-        accountsDto.setAccountNumber(1234567890L);
-        CustomerDto customerDto = new CustomerDto();
-        customerDto.setAccountsDto(accountsDto);
-
-        Accounts existingAccount = new Accounts();
-        existingAccount.setAccountNumber(1234567890L);
-        existingAccount.setCustomerId(42L);
-        when(accountsRepository.findById(1234567890L)).thenReturn(Optional.of(existingAccount));
-        when(accountsRepository.save(any(Accounts.class))).thenReturn(existingAccount);
-        when(customerRepository.findById(42L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> service.updateAccount(customerDto))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Customer")
-                .hasMessageContaining("42");
-    }
-
     // ---------- deleteAccount ----------
 
     @Test
@@ -248,7 +226,7 @@ class AccountsServiceImplTest {
         boolean deleted = service.deleteAccount("9345432123");
 
         assertThat(deleted).isTrue();
-        verify(accountsRepository).deleteByCustomerId(42L);
+        verify(accountsRepository).deleteByCustomer_CustomerId(42L);
         verify(customerRepository).deleteById(42L);
     }
 
@@ -262,7 +240,7 @@ class AccountsServiceImplTest {
                 .hasMessageContaining("Customer")
                 .hasMessageContaining("0000000000");
 
-        verify(accountsRepository, never()).deleteByCustomerId(any());
+        verify(accountsRepository, never()).deleteByCustomer_CustomerId(any());
         verify(customerRepository, never()).deleteById(any());
     }
 

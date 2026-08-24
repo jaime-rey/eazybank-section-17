@@ -17,6 +17,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.eazybytes.accounts.entity.Customer;
+import com.eazybytes.accounts.repository.CustomerRepository;
+
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
 @ActiveProfiles("integration")
@@ -31,48 +34,39 @@ class OptimisticLockingIT {
     private AccountsRepository accountsRepository;
     @Autowired
     private TransactionTemplate transactionTemplate;
+    @Autowired
+    private CustomerRepository customerRepository;
 
     @Test
     void secondUpdateFailsWhenFirstAlreadyBumpedTheVersion() {
-        // TODO 1: seed one Accounts row with branchAddress="Madrid" and save it.
-        //         Capture its accountNumber for later.
+        Customer customer = new Customer();
+        customer.setName("Owner");
+        customer.setEmail("owner@example.com");
+        customer.setMobileNumber("9345432123");
+        customer = customerRepository.save(customer);
+
         Accounts accounts = new Accounts();
-        accounts.setCustomerId(1L);
+        accounts.setCustomer(customer);
         accounts.setAccountType("Savings");
         accounts.setBranchAddress("Madrid");
         accounts.setCommunicationSw(false);
         accounts = accountsRepository.save(accounts);
         Long id = accounts.getAccountNumber();
-
-        // TODO 2: first "user" transaction — load by id, change branchAddress
-        //         to "Barcelona", commit (return from template).
-
+        Customer sharedCustomer = customer;
         transactionTemplate.execute(status -> {
             Accounts loaded = accountsRepository.findById(id).orElseThrow();
             loaded.setBranchAddress("Barcelona");
             return null;
         });
 
-        // TODO 3: assert the first update succeeded: reload from DB and check
-        //         branchAddress == "Barcelona" and version == 1.
         Accounts afterFirstUpdate = accountsRepository.findById(id).orElseThrow();
         assertThat(afterFirstUpdate.getBranchAddress()).isEqualTo("Barcelona");
         assertThat(afterFirstUpdate.getVersion()).isEqualTo(1L);
 
-        // TODO 4: simulate the stale second user — build an Accounts instance
-        //         manually with the SAME accountNumber but version=0 (the value
-        //         they read BEFORE the first user's update). Wrap the save
-        //         in transactionTemplate.execute(...) and expect
-        //         ObjectOptimisticLockingFailureException.
-        //         Hint: to "build manually" use a fresh Accounts object with
-        //         the required fields set (customerId, accountType, branchAddress,
-        //         communicationSw, version=0) and the same accountNumber.
-        //         accountsRepository.save() on a detached entity with a version
-        //         mismatch triggers the check.
         assertThatThrownBy(() -> transactionTemplate.execute(status -> {
             Accounts stale = new Accounts();
             stale.setAccountNumber(id);          // same PK as the real row
-            stale.setCustomerId(1L);      // same as the seed (any long is fine)
+            stale.setCustomer(sharedCustomer);     // same as the seed (any long is fine)
             stale.setAccountType("Savings");     // "Savings"
             stale.setBranchAddress("Sevilla");    // what user 2 wanted
             stale.setCommunicationSw(false);

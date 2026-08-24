@@ -18,9 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
-import java.util.Random;
 
 @Service
 @AllArgsConstructor
@@ -64,10 +64,7 @@ public class AccountsServiceImpl  implements IAccountsService {
      */
     private Accounts createNewAccount(Customer customer) {
         Accounts newAccount = new Accounts();
-        newAccount.setCustomerId(customer.getCustomerId());
-        long randomAccNumber = 1000000000L + new Random().nextInt(900000000);
-
-        newAccount.setAccountNumber(randomAccNumber);
+        customer.addAccount(newAccount);
         newAccount.setAccountType(AccountsConstants.SAVINGS);
         newAccount.setBranchAddress(AccountsConstants.ADDRESS);
         return newAccount;
@@ -82,7 +79,7 @@ public class AccountsServiceImpl  implements IAccountsService {
         Customer customer = customerRepository.findByMobileNumber(mobileNumber).orElseThrow(
                 () -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber)
         );
-        Accounts accounts = accountsRepository.findByCustomerId(customer.getCustomerId()).orElseThrow(
+        Accounts accounts = accountsRepository.findByCustomer_CustomerId(customer.getCustomerId()).orElseThrow(
                 () -> new ResourceNotFoundException("Account", "customerId", customer.getCustomerId().toString())
         );
         CustomerDto customerDto = customerMapper.toDto(customer);
@@ -95,6 +92,7 @@ public class AccountsServiceImpl  implements IAccountsService {
      * @return boolean indicating if the update of Account details is successful or not
      */
     @Override
+    @Transactional
     public boolean updateAccount(CustomerDto customerDto) {
         boolean isUpdated = false;
         AccountsDto accountsDto = customerDto.getAccountsDto();
@@ -105,10 +103,7 @@ public class AccountsServiceImpl  implements IAccountsService {
             accountsMapper.updateEntity(accountsDto, accounts);
             accounts = accountsRepository.save(accounts);
 
-            Long customerId = accounts.getCustomerId();
-            Customer customer = customerRepository.findById(customerId).orElseThrow(
-                    () -> new ResourceNotFoundException("Customer", "CustomerID", customerId.toString())
-            );
+            Customer customer = accounts.getCustomer();
             customerMapper.updateEntity(customerDto, customer);
             customerRepository.save(customer);
             isUpdated = true;
@@ -125,7 +120,7 @@ public class AccountsServiceImpl  implements IAccountsService {
         Customer customer = customerRepository.findByMobileNumber(mobileNumber).orElseThrow(
                 () -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber)
         );
-        accountsRepository.deleteByCustomerId(customer.getCustomerId());
+        accountsRepository.deleteByCustomer_CustomerId(customer.getCustomerId());
         customerRepository.deleteById(customer.getCustomerId());
         return true;
     }

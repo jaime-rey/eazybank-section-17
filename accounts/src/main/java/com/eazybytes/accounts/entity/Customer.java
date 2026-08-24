@@ -3,6 +3,9 @@ package com.eazybytes.accounts.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -23,4 +26,12 @@ public class Customer extends BaseEntity {
     @Column(name = "mobile_number")
     private String mobileNumber;
 
+    @ToString.Exclude
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.PERSIST)
+    private List<Accounts> accounts = new ArrayList<>();
+
+    public void addAccount(Accounts a) {
+        accounts.add(a);
+        a.setCustomer(this);
+    }
 }

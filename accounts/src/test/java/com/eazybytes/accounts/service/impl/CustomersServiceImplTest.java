@@ -55,7 +55,7 @@ class CustomersServiceImplTest {
         cards.setCardNumber("1234567890123456");
 
         when(customerRepository.findByMobileNumber(MOBILE)).thenReturn(Optional.of(customer));
-        when(accountsRepository.findByCustomerId(42L)).thenReturn(Optional.of(account));
+        when(accountsRepository.findByCustomer_CustomerId(42L)).thenReturn(Optional.of(account));
         when(loansFeignClient.fetchLoanDetails(CORRELATION_ID, MOBILE)).thenReturn(ResponseEntity.ok(loans));
         when(cardsFeignClient.fetchCardDetails(CORRELATION_ID, MOBILE)).thenReturn(ResponseEntity.ok(cards));
 
@@ -74,7 +74,7 @@ class CustomersServiceImplTest {
     @DisplayName("fetchCustomerDetails: leaves loansDto null when loansFeignClient returns null")
     void fetchCustomerDetails_loansFeignReturnsNull() {
         when(customerRepository.findByMobileNumber(MOBILE)).thenReturn(Optional.of(customer()));
-        when(accountsRepository.findByCustomerId(42L)).thenReturn(Optional.of(account()));
+        when(accountsRepository.findByCustomer_CustomerId(42L)).thenReturn(Optional.of(account()));
         when(loansFeignClient.fetchLoanDetails(CORRELATION_ID, MOBILE)).thenReturn(null);
         CardsDto cards = new CardsDto();
         when(cardsFeignClient.fetchCardDetails(CORRELATION_ID, MOBILE)).thenReturn(ResponseEntity.ok(cards));
@@ -89,7 +89,7 @@ class CustomersServiceImplTest {
     @DisplayName("fetchCustomerDetails: leaves cardsDto null when cardsFeignClient returns null")
     void fetchCustomerDetails_cardsFeignReturnsNull() {
         when(customerRepository.findByMobileNumber(MOBILE)).thenReturn(Optional.of(customer()));
-        when(accountsRepository.findByCustomerId(42L)).thenReturn(Optional.of(account()));
+        when(accountsRepository.findByCustomer_CustomerId(42L)).thenReturn(Optional.of(account()));
         LoansDto loans = new LoansDto();
         when(loansFeignClient.fetchLoanDetails(CORRELATION_ID, MOBILE)).thenReturn(ResponseEntity.ok(loans));
         when(cardsFeignClient.fetchCardDetails(CORRELATION_ID, MOBILE)).thenReturn(null);
@@ -116,7 +116,7 @@ class CustomersServiceImplTest {
     @DisplayName("fetchCustomerDetails: throws ResourceNotFoundException when the customer has no account")
     void fetchCustomerDetails_accountNotFound() {
         when(customerRepository.findByMobileNumber(MOBILE)).thenReturn(Optional.of(customer()));
-        when(accountsRepository.findByCustomerId(42L)).thenReturn(Optional.empty());
+        when(accountsRepository.findByCustomer_CustomerId(42L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.fetchCustomerDetails(MOBILE, CORRELATION_ID))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -138,7 +138,7 @@ class CustomersServiceImplTest {
 
     private static Accounts account() {
         Accounts a = new Accounts();
-        a.setCustomerId(42L);
+        a.setCustomer(customer());
         a.setAccountNumber(1234567890L);
         a.setAccountType("Savings");
         a.setBranchAddress("123 Main St");
