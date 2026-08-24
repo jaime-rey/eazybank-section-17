@@ -43,9 +43,6 @@ class AccountBeneficiaryIT {
     @PersistenceContext
     private EntityManager entityManager;
 
-    private static final List<Long> ACCOUNT_NUMBERS =
-        List.of(1000000001L, 1000000002L, 1000000003L);
-
     @Test
     @Transactional
     void reproducesNPlusOneWhenAccessingBeneficiariesNaively() {
@@ -68,11 +65,11 @@ class AccountBeneficiaryIT {
     @Test
     @Transactional
     void fixesNPlusOneWithEntityGraph() {
-        seedData();
+        List<Long> accountNumbers = seedData();
 
         System.out.println(">>> BEGIN fix A (@EntityGraph) <<<");
         List<AccountBeneficiary> links =
-            accountBeneficiaryRepository.findByIdAccountNumberIn(ACCOUNT_NUMBERS);
+            accountBeneficiaryRepository.findByIdAccountNumberIn(accountNumbers);
         for (AccountBeneficiary ab : links) {
             // beneficiary is already hydrated (implicit JOIN FETCH) → no extra SELECTs.
             String name = ab.getBeneficiary().getFullName();
@@ -86,11 +83,11 @@ class AccountBeneficiaryIT {
     @Test
     @Transactional
     void fixesNPlusOneWithNativeSqlProjection() {
-        seedData();
+        List<Long> accountNumbers = seedData();
 
         System.out.println(">>> BEGIN fix B (native SQL + projection) <<<");
         List<BeneficiarySummary> summaries =
-            accountBeneficiaryRepository.summariesForAccountsNative(ACCOUNT_NUMBERS);
+            accountBeneficiaryRepository.summariesForAccountsNative(accountNumbers);
         for (BeneficiarySummary s : summaries) {
             // Everything comes from the projection — no entity, no proxy.
             assertThat(s.getFullName()).isNotEmpty();
@@ -102,12 +99,11 @@ class AccountBeneficiaryIT {
         assertThat(summaries).hasSize(9);
     }
 
-    // Seed data shared by all three tests. Each test runs in its own @Transactional
-    // that rolls back on completion, so data does not persist across tests.
-    private void seedData() {
-        List<Accounts> accounts = ACCOUNT_NUMBERS.stream()
-            .map(AccountBeneficiaryIT::newAccount)
-            .toList();
+    // Seed 3 accounts + 4 beneficiaries + 9 links. Returns the DB-generated
+    // account numbers so tests can query by them. Each test runs in its own
+    // @Transactional that rolls back on completion.
+    private List<Long> seedData() {
+        List<Accounts> accounts = List.of(newAccount(), newAccount(), newAccount());
         accountsRepository.saveAll(accounts);
 
         List<Beneficiary> people = List.of(
@@ -132,11 +128,12 @@ class AccountBeneficiaryIT {
         // reads against the DB, not persistence-context cache hits.
         entityManager.flush();
         entityManager.clear();
+
+        return accounts.stream().map(Accounts::getAccountNumber).toList();
     }
 
-    private static Accounts newAccount(long number) {
+    private static Accounts newAccount() {
         Accounts a = new Accounts();
-        a.setAccountNumber(number);
         a.setCustomerId(ThreadLocalRandom.current().nextLong(1, 10_000));
         a.setAccountType("Savings");
         a.setBranchAddress("123 Test St");

@@ -13,6 +13,7 @@ public interface AccountsMapper {
 
     @Mapping(target = "customerId", ignore = true)
     @Mapping(target = "communicationSw", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)

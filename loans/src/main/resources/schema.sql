@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS `loans` (
   `total_loan` int NOT NULL,
   `amount_paid` int NOT NULL,
   `outstanding_amount` int NOT NULL,
+  `version` bigint NOT NULL DEFAULT 0,
   `created_at` date NOT NULL,
   `created_by` varchar(20) NOT NULL,
   `updated_at` date DEFAULT NULL,

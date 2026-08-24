@@ -3,6 +3,7 @@ package com.eazybytes.cards.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -35,4 +36,7 @@ public class BaseEntity {
     @Column(insertable = false)
     private String updatedBy;
 
+    @Version
+    @Column(nullable = false)
+    private Long version;
 }

@@ -19,6 +19,7 @@ public interface CustomerMapper {
     CustomerDetailsDto toDetailsDto(Customer customer);
 
     @Mapping(target = "customerId", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
@@ -26,6 +27,7 @@ public interface CustomerMapper {
     Customer toEntity(CustomerDto customerDto);
 
     @Mapping(target = "customerId", ignore = true)
+    @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
