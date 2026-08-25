@@ -14,6 +14,8 @@ import com.eazybytes.accounts.service.ICustomersService;
 import com.eazybytes.accounts.service.client.CardsFeignClient;
 import com.eazybytes.accounts.service.client.LoansFeignClient;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import java.util.concurrent.CompletableFuture;
@@ -21,6 +23,8 @@ import java.util.concurrent.CompletableFuture;
 @Service
 @AllArgsConstructor
 public class CustomersServiceImpl implements ICustomersService {
+
+    private static final Logger log = LoggerFactory.getLogger(CustomersServiceImpl.class);
 
     private AccountsRepository accountsRepository;
     private CustomerRepository customerRepository;
@@ -36,6 +40,7 @@ public class CustomersServiceImpl implements ICustomersService {
      */
     @Override
     public CustomerDetailsDto fetchCustomerDetails(String mobileNumber, String correlationId) {
+        log.info("fetchCustomerDetails start, mobileNumber={} correlationId={}", mobileNumber, correlationId);
         Customer customer = customerRepository.findByMobileNumber(mobileNumber).orElseThrow(
                 () -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber)
         );
@@ -46,6 +51,7 @@ public class CustomersServiceImpl implements ICustomersService {
         CustomerDetailsDto customerDetailsDto = customerMapper.toDetailsDto(customer);
         customerDetailsDto.setAccountsDto(accountsMapper.toDto(accounts));
 
+        log.debug("Calling loans and cards services in parallel, customerId={}", customer.getCustomerId());
         CompletableFuture<ResponseEntity<LoansDto>> loansFuturo = CompletableFuture.supplyAsync(
             () -> loansFeignClient.fetchLoanDetails(correlationId, mobileNumber)
         );
@@ -59,13 +65,21 @@ public class CustomersServiceImpl implements ICustomersService {
         ResponseEntity<LoansDto> loansDtoResponseEntity  = loansFuturo.join();
         if(null != loansDtoResponseEntity) {
             customerDetailsDto.setLoansDto(loansDtoResponseEntity.getBody());
+        } else {
+            log.warn("loansFeignClient returned null, fallback triggered mobileNumber={}", mobileNumber);
         }
 
         ResponseEntity<CardsDto> cardsDtoResponseEntity = cardsFuturo.join();
         if(null != cardsDtoResponseEntity) {
             customerDetailsDto.setCardsDto(cardsDtoResponseEntity.getBody());
+        } else {
+            log.warn("cardsFeignClient returned null, fallback triggered mobileNumber={}", mobileNumber);
         }
 
+        log.info("fetchCustomerDetails success, customerId={} loansPresent={} cardsPresent={}",
+                customer.getCustomerId(),
+                customerDetailsDto.getLoansDto() != null,
+                customerDetailsDto.getCardsDto() != null);
         return customerDetailsDto;
 
     }

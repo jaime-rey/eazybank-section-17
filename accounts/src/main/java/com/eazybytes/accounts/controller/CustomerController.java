@@ -59,9 +59,8 @@ public class CustomerController {
                                                                     @RequestParam @Pattern(regexp="(^$|\\d{10})",
                                                                             message = "Mobile number must be 10 digits")
                                                                    String mobileNumber) {
-        logger.debug("fetchCustomerDetails method start");
+        logger.info("GET /api/fetchCustomerDetails, mobileNumber={} correlationId={}", mobileNumber, correlationId);
         CustomerDetailsDto customerDetailsDto = iCustomersService.fetchCustomerDetails(mobileNumber, correlationId);
-        logger.debug("fetchCustomerDetails method end");
         return ResponseEntity.status(HttpStatus.SC_OK).body(customerDetailsDto);
 
     }

@@ -9,6 +9,8 @@ import com.eazybytes.cards.mapper.CardsMapper;
 import com.eazybytes.cards.repository.CardsRepository;
 import com.eazybytes.cards.service.ICardsService;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -18,6 +20,8 @@ import java.util.Random;
 @AllArgsConstructor
 public class CardsServiceImpl implements ICardsService {
 
+    private static final Logger log = LoggerFactory.getLogger(CardsServiceImpl.class);
+
     private CardsRepository cardsRepository;
     private CardsMapper cardsMapper;
 
@@ -26,11 +30,14 @@ public class CardsServiceImpl implements ICardsService {
      */
     @Override
     public void createCard(String mobileNumber) {
+        log.info("createCard start, mobileNumber={}", mobileNumber);
         Optional<Cards> optionalCards= cardsRepository.findByMobileNumber(mobileNumber);
         if(optionalCards.isPresent()){
+            log.warn("createCard rejected, card already exists mobileNumber={}", mobileNumber);
             throw new CardAlreadyExistsException("Card already registered with given mobileNumber "+mobileNumber);
         }
         cardsRepository.save(createNewCard(mobileNumber));
+        log.info("createCard success, mobileNumber={}", mobileNumber);
     }
 
     /**
@@ -56,9 +63,11 @@ public class CardsServiceImpl implements ICardsService {
      */
     @Override
     public CardsDto fetchCard(String mobileNumber) {
+        log.info("fetchCard start, mobileNumber={}", mobileNumber);
         Cards cards = cardsRepository.findByMobileNumber(mobileNumber).orElseThrow(
                 () -> new ResourceNotFoundException("Card", "mobileNumber", mobileNumber)
         );
+        log.debug("fetchCard success, mobileNumber={} cardId={}", mobileNumber, cards.getCardId());
         return cardsMapper.toDto(cards);
     }
 
@@ -69,10 +78,12 @@ public class CardsServiceImpl implements ICardsService {
      */
     @Override
     public boolean updateCard(CardsDto cardsDto) {
+        log.info("updateCard start, cardNumber={}", cardsDto.getCardNumber());
         Cards cards = cardsRepository.findByCardNumber(cardsDto.getCardNumber()).orElseThrow(
                 () -> new ResourceNotFoundException("Card", "CardNumber", cardsDto.getCardNumber()));
         cardsMapper.updateEntity(cardsDto, cards);
         cardsRepository.save(cards);
+        log.info("updateCard success, cardNumber={}", cardsDto.getCardNumber());
         return  true;
     }
 
@@ -82,10 +93,12 @@ public class CardsServiceImpl implements ICardsService {
      */
     @Override
     public boolean deleteCard(String mobileNumber) {
+        log.info("deleteCard start, mobileNumber={}", mobileNumber);
         Cards cards = cardsRepository.findByMobileNumber(mobileNumber).orElseThrow(
                 () -> new ResourceNotFoundException("Card", "mobileNumber", mobileNumber)
         );
         cardsRepository.deleteById(cards.getCardId());
+        log.info("deleteCard success, mobileNumber={} cardId={}", mobileNumber, cards.getCardId());
         return true;
     }
 

@@ -72,6 +72,7 @@ public class CardsController {
     public ResponseEntity<ResponseDto> createCard(@Valid @RequestParam
                                                       @Pattern(regexp="(^$|\\d{10})",message = "Mobile number must be 10 digits")
                                                       String mobileNumber) {
+        logger.info("POST /api/create, mobileNumber={}", mobileNumber);
         iCardsService.createCard(mobileNumber);
             return ResponseEntity
                     .status(HttpStatus.CREATED)
@@ -98,9 +99,8 @@ public class CardsController {
                                                                 @RequestParam
                                                                @Pattern(regexp="(^$|\\d{10})",message = "Mobile number must be 10 digits")
                                                                String mobileNumber) {
-        logger.debug("fetchCardDetails method start");
+        logger.info("GET /api/fetch, mobileNumber={} correlationId={}", mobileNumber, correlationId);
         CardsDto cardsDto = iCardsService.fetchCard(mobileNumber);
-        logger.debug("fetchCardDetails method end");
         return ResponseEntity.status(HttpStatus.OK).body(cardsDto);
     }
 
@@ -125,6 +125,7 @@ public class CardsController {
     )
     @PutMapping("/update")
     public ResponseEntity<ResponseDto> updateCardDetails(@Valid @RequestBody CardsDto cardsDto) {
+        logger.info("PUT /api/update, cardNumber={}", cardsDto.getCardNumber());
         boolean isUpdated = iCardsService.updateCard(cardsDto);
         if(isUpdated) {
             return ResponseEntity
@@ -160,6 +161,7 @@ public class CardsController {
     public ResponseEntity<ResponseDto> deleteCardDetails(@RequestParam
                                                                 @Pattern(regexp="(^$|\\d{10})",message = "Mobile number must be 10 digits")
                                                                 String mobileNumber) {
+        logger.info("DELETE /api/delete, mobileNumber={}", mobileNumber);
         boolean isDeleted = iCardsService.deleteCard(mobileNumber);
         if(isDeleted) {
             return ResponseEntity

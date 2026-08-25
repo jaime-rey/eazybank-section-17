@@ -72,6 +72,7 @@ public class AccountsController {
     )
     @PostMapping("/create")
     public ResponseEntity<ResponseDto> createAccount(@Valid @RequestBody CustomerDto customerDto) {
+        logger.info("POST /api/create, mobileNumber={}", customerDto.getMobileNumber());
         iAccountsService.createAccount(customerDto);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -122,6 +123,7 @@ public class AccountsController {
     )
     @PutMapping("/update")
     public ResponseEntity<ResponseDto> updateAccountDetails(@Valid @RequestBody CustomerDto customerDto) {
+        logger.info("PUT /api/update, mobileNumber={}", customerDto.getMobileNumber());
         boolean isUpdated = iAccountsService.updateAccount(customerDto);
         if(isUpdated) {
             return ResponseEntity
@@ -157,6 +159,7 @@ public class AccountsController {
     public ResponseEntity<ResponseDto> deleteAccountDetails(@RequestParam
                                                                 @Pattern(regexp="(^$|\\d{10})",message = "Mobile number must be 10 digits")
                                                                 String mobileNumber) {
+        logger.info("DELETE /api/delete, mobileNumber={}", mobileNumber);
         boolean isDeleted = iAccountsService.deleteAccount(mobileNumber);
         if(isDeleted) {
             return ResponseEntity

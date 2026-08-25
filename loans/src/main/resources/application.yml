@@ -69,4 +69,4 @@ logging:
       eazybytes:
         loans: DEBUG
   pattern:
-    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id},%X{correlationId}]"

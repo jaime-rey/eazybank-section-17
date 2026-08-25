@@ -72,6 +72,7 @@ public class LoansController {
     public ResponseEntity<ResponseDto> createLoan(@RequestParam
                                                       @Pattern(regexp="(^$|\\d{10})",message = "Mobile number must be 10 digits")
                                                       String mobileNumber) {
+        logger.info("POST /api/create, mobileNumber={}", mobileNumber);
         iLoansService.createLoan(mobileNumber);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -98,9 +99,8 @@ public class LoansController {
                                                                 @RequestParam
                                                                @Pattern(regexp="(^$|\\d{10})",message = "Mobile number must be 10 digits")
                                                                String mobileNumber) {
-        logger.debug("fetchLoanDetails method start");
+        logger.info("GET /api/fetch, mobileNumber={} correlationId={}", mobileNumber, correlationId);
         LoansDto loansDto = iLoansService.fetchLoan(mobileNumber);
-        logger.debug("fetchLoanDetails method end");
         return ResponseEntity.status(HttpStatus.OK).body(loansDto);
     }
 
@@ -125,6 +125,7 @@ public class LoansController {
     )
     @PutMapping("/update")
     public ResponseEntity<ResponseDto> updateLoanDetails(@Valid @RequestBody LoansDto loansDto) {
+        logger.info("PUT /api/update, loanNumber={}", loansDto.getLoanNumber());
         boolean isUpdated = iLoansService.updateLoan(loansDto);
         if(isUpdated) {
             return ResponseEntity
@@ -160,6 +161,7 @@ public class LoansController {
     public ResponseEntity<ResponseDto> deleteLoanDetails(@RequestParam
                                                                 @Pattern(regexp="(^$|\\d{10})",message = "Mobile number must be 10 digits")
                                                                 String mobileNumber) {
+        logger.info("DELETE /api/delete, mobileNumber={}", mobileNumber);
         boolean isDeleted = iLoansService.deleteLoan(mobileNumber);
         if(isDeleted) {
             return ResponseEntity
