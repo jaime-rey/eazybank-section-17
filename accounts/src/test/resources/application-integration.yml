@@ -20,6 +20,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none           # el schema lo pone schema.sql (fuente unica de verdad)
+    properties:
+      hibernate:
+        generate_statistics: true
     database-platform: org.hibernate.dialect.MySQLDialect
     show-sql: true
   sql:
