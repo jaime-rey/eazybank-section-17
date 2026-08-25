@@ -36,12 +36,25 @@ param(
 $ErrorActionPreference = "Stop"
 
 function KC {
-    $out = kubectl exec -n $Namespace $KeycloakDeployment -- /opt/keycloak/bin/kcadm.sh @args 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "ERROR kcadm: $out" -ForegroundColor Red
-        throw "kcadm falló"
+    # PS 5.1 wraps native-command stderr as ErrorRecord and aborts under
+    # $ErrorActionPreference = Stop, even for kcadm's "Logging into..." banner.
+    # Combo fix: scope Continue AND redirect stderr to a file so it never
+    # touches the pipeline. Real failures still surface via $LASTEXITCODE.
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $errFile = [System.IO.Path]::GetTempFileName()
+    try {
+        $out = & kubectl exec -n $Namespace $KeycloakDeployment -- /opt/keycloak/bin/kcadm.sh @args 2>$errFile
+        if ($LASTEXITCODE -ne 0) {
+            $stderr = Get-Content $errFile -Raw
+            Write-Host "ERROR kcadm: $stderr" -ForegroundColor Red
+            throw "kcadm falló"
+        }
+        return $out
+    } finally {
+        $ErrorActionPreference = $prev
+        Remove-Item $errFile -ErrorAction SilentlyContinue
     }
-    return $out
 }
 
 Write-Host "== Login en kcadm ==" -ForegroundColor Cyan
@@ -67,7 +80,7 @@ foreach ($r in $Roles) {
 }
 
 Write-Host "== Creando cliente '$ClientId' ==" -ForegroundColor Cyan
-$createOutput = KC create clients -r $Realm `
+KC create clients -r $Realm `
     -s "clientId=$ClientId" `
     -s enabled=true `
     -s publicClient=false `
@@ -75,9 +88,12 @@ $createOutput = KC create clients -r $Realm `
     -s standardFlowEnabled=false `
     -s directAccessGrantsEnabled=false `
     -s implicitFlowEnabled=false `
-    -s protocol=openid-connect
-$cid = ($createOutput | Select-String -Pattern "id '([^']+)'").Matches.Groups[1].Value
-if (-not $cid) { throw "No se pudo extraer el UUID del cliente. Salida: $createOutput" }
+    -s protocol=openid-connect | Out-Null
+
+# Query the UUID via a follow-up get: kcadm prints "Created new client with id '...'"
+# to stderr, which our KC helper discards, so we can't parse it from the create output.
+$cid = ((KC get clients -r $Realm -q "clientId=$ClientId" --fields id) | ConvertFrom-Json)[0].id
+if (-not $cid) { throw "No se pudo obtener el UUID del cliente recien creado." }
 Write-Host "  UUID interno: $cid"
 
 Write-Host "== Recuperando client_secret ==" -ForegroundColor Cyan
