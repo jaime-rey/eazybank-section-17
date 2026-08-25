@@ -74,6 +74,7 @@ logging:
     com:
       eazybytes:
         accounts: DEBUG
+    org.apache.kafka.clients.consumer.internals.OffsetFetcherUtils: ERROR
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id},%X{correlationId}]"
 
