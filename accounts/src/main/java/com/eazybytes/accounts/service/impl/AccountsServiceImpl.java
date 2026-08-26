@@ -4,6 +4,7 @@ import com.eazybytes.accounts.constants.AccountsConstants;
 import com.eazybytes.accounts.dto.AccountsDto;
 import com.eazybytes.accounts.dto.AccountsMsgDto;
 import com.eazybytes.accounts.dto.CustomerDto;
+import com.eazybytes.accounts.dto.CustomerListItemDto;
 import com.eazybytes.accounts.entity.Accounts;
 import com.eazybytes.accounts.entity.Customer;
 import com.eazybytes.accounts.exception.CustomerAlreadyExistsException;
@@ -19,7 +20,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.eazybytes.accounts.dto.CustomerSearchDto;
+import com.eazybytes.accounts.repository.spec.CustomerSpecifications;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import java.util.Optional;
 
 @Service
@@ -166,5 +171,20 @@ public class AccountsServiceImpl  implements IAccountsService {
         return  isUpdated;
     }
 
+    @Override
+    public Page<CustomerListItemDto> searchCustomers(CustomerSearchDto filters, Pageable pageable) {
+        Specification<Customer> spec = CustomerSpecifications.build(
+            filters.name(),
+            filters.email(),
+            filters.mobileNumberPrefix(),
+            filters.hasAccount()
+        );
+        return customerRepository.findAll(spec, pageable)
+            .map(c -> new CustomerListItemDto(
+                c.getCustomerId(),
+                c.getName(),
+                c.getEmail(),
+                c.getMobileNumber()));
+    }
 
 }

@@ -1,10 +1,7 @@
 package com.eazybytes.accounts.controller;
 
 import com.eazybytes.accounts.constants.AccountsConstants;
-import com.eazybytes.accounts.dto.AccountsContactInfoDto;
-import com.eazybytes.accounts.dto.CustomerDto;
-import com.eazybytes.accounts.dto.ErrorResponseDto;
-import com.eazybytes.accounts.dto.ResponseDto;
+import com.eazybytes.accounts.dto.*;
 import com.eazybytes.accounts.service.IAccountsService;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
@@ -19,6 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -256,5 +256,17 @@ public class AccountsController {
                 .body(accountsContactInfoDto);
     }
 
+    @Operation(
+        summary = "Search Customers REST API",
+        description = "Search customers by optional filters with pagination"
+    )
+    @ApiResponse(responseCode = "200", description = "HTTP Status OK")
+    @GetMapping("/customers/search")
+    public ResponseEntity<Page<CustomerListItemDto>> searchCustomers(
+        @ModelAttribute CustomerSearchDto filters,
+        @PageableDefault(size = 20, sort = "name") Pageable pageable) {
+        logger.info("GET /api/customers/search filters={} page={}", filters, pageable);
+        return ResponseEntity.ok(iAccountsService.searchCustomers(filters, pageable));
+    }
 
 }

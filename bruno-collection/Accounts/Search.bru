@@ -1,0 +1,39 @@
+meta {
+  name: Search
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{gatewayUrl}}/eazybank/accounts/api/customers/search?name=&email=&mobileNumberPrefix=&hasAccount=&page=0&size=20&sort=name,ASC
+  body: none
+  auth: none
+}
+
+params:query {
+  name:
+  email:
+  mobileNumberPrefix:
+  hasAccount:
+  page: 0
+  size: 20
+  sort: name,ASC
+}
+
+docs {
+  All filters are optional. Examples:
+    - name=ada                     -> contains, case-insensitive
+    - email=gmail                  -> contains, case-insensitive
+    - mobileNumberPrefix=555       -> starts with
+    - hasAccount=true              -> only customers with >=1 account
+    - page=0&size=10&sort=name,DESC
+  Combine any of them. Empty filters are ignored.
+}
+
+tests {
+  test("200 OK", function() { expect(res.status).to.equal(200); });
+  test("has page envelope", function() {
+    expect(res.body).to.have.property("content");
+    expect(res.body).to.have.property("totalElements");
+  });
+}

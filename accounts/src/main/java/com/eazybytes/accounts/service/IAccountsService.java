@@ -38,4 +38,7 @@ public interface IAccountsService {
      */
     boolean updateCommunicationStatus(Long accountNumber);
 
+    org.springframework.data.domain.Page<com.eazybytes.accounts.dto.CustomerListItemDto> searchCustomers(
+        com.eazybytes.accounts.dto.CustomerSearchDto filters,
+        org.springframework.data.domain.Pageable pageable);
 }
