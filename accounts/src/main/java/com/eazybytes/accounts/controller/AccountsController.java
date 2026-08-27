@@ -269,4 +269,14 @@ public class AccountsController {
         return ResponseEntity.ok(iAccountsService.searchCustomers(filters, pageable));
     }
 
+    @Operation(summary = "Search Customers V2", description = "10-filter dynamic search")
+    @ApiResponse(responseCode = "200", description = "HTTP Status OK")
+    @GetMapping("/customers/search-v2")
+    public ResponseEntity<Page<CustomerListItemDto>> searchCustomersV2(
+        @ModelAttribute CustomerSearchCriteria criteria,
+        @PageableDefault(size = 20, sort = "customerId") Pageable pageable) {
+        logger.info("GET /api/customers/search-v2 criteria={} page={}", criteria, pageable);
+        return ResponseEntity.ok(iAccountsService.searchCustomersV2(criteria, pageable));
+    }
+
 }

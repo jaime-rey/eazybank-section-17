@@ -1,6 +1,10 @@
 package com.eazybytes.accounts.service;
 
 import com.eazybytes.accounts.dto.CustomerDto;
+import com.eazybytes.accounts.dto.CustomerListItemDto;
+import com.eazybytes.accounts.dto.CustomerSearchCriteria;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface IAccountsService {
 
@@ -41,4 +45,8 @@ public interface IAccountsService {
     org.springframework.data.domain.Page<com.eazybytes.accounts.dto.CustomerListItemDto> searchCustomers(
         com.eazybytes.accounts.dto.CustomerSearchDto filters,
         org.springframework.data.domain.Pageable pageable);
+
+    Page<CustomerListItemDto> searchCustomersV2(
+        CustomerSearchCriteria criteria,
+        Pageable pageable);
 }
