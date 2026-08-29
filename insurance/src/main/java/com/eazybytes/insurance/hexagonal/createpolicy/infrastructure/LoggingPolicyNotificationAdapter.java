@@ -4,8 +4,10 @@ import com.eazybytes.insurance.hexagonal.createpolicy.domain.Policy;
 import com.eazybytes.insurance.hexagonal.createpolicy.domain.port.PolicyNotificationPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+@Profile("dev")
 @Component
 public class LoggingPolicyNotificationAdapter implements PolicyNotificationPort {
 

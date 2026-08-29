@@ -3,12 +3,14 @@ package com.eazybytes.insurance.hexagonal.createpolicy.infrastructure;
 import com.eazybytes.insurance.hexagonal.createpolicy.domain.CoverageType;
 import com.eazybytes.insurance.hexagonal.createpolicy.domain.Policy;
 import com.eazybytes.insurance.hexagonal.createpolicy.domain.port.PolicyRepositoryPort;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Profile("dev")
 @Component
 public class InMemoryPolicyRepositoryAdapter implements PolicyRepositoryPort {
 
