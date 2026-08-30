@@ -7,17 +7,15 @@ import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Post;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 
 @Controller("/api/policies")
+@RequiredArgsConstructor
 public class PolicyController {
 
     private final CreatePolicyUseCase createPolicyUseCase;
-
-    public PolicyController(CreatePolicyUseCase createPolicyUseCase) {
-        this.createPolicyUseCase = createPolicyUseCase;
-    }
 
     @Post
     public HttpResponse<Policy> create(@Valid @Body CreatePolicyRequest request) {
