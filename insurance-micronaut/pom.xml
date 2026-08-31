@@ -93,15 +93,30 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- Kafka -->
+    <!-- Kafka.
+         Excludes org.lz4:lz4-java to avoid its 1.8.0 (CVE-2025-66566); the safe replacement is
+         declared below at its new coordinates (at.yawk.lz4:lz4-java:1.8.1). -->
     <dependency>
       <groupId>io.micronaut.kafka</groupId>
       <artifactId>micronaut-kafka</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.lz4</groupId>
+          <artifactId>lz4-java</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
-    <!-- Override transitive lz4-java (kafka-clients pulls org.lz4:1.8.0, vulnerable to CVE-2025-66566).
-         Coordinates relocated by the maintainer from org.lz4 to at.yawk.lz4 starting in 1.8.1. -->
+    <!-- Force kafka-clients to the latest 3.9 patch (Micronaut Kafka 5.9 targets Kafka 3.x). -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>3.9.2</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <!-- Safe lz4-java replacement (maintainer relocated coordinates from org.lz4 to at.yawk.lz4 in 1.8.1). -->
     <dependency>
       <groupId>at.yawk.lz4</groupId>
       <artifactId>lz4-java</artifactId>
