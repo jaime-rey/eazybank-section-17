@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 @Controller("/api/policies")
 @RequiredArgsConstructor
@@ -19,7 +20,7 @@ public class PolicyController {
 
     @Post
     public HttpResponse<Policy> create(@Valid @Body CreatePolicyRequest request) {
-        Policy policy = createPolicyUseCase.execute(request.toCommand(), LocalDate.now());
+        Policy policy = createPolicyUseCase.execute(request.toCommand(), LocalDate.now(ZoneOffset.UTC));
         return HttpResponse.created(policy);
     }
 }
