@@ -24,6 +24,13 @@ exclude:
   # IntelliJ's inspection only knows standard headers, so it flags all
   # usages as "Unknown HTTP header" — false positive.
   - name: UastIncorrectHttpHeaderInspection
+  # SpringBoot @SpringBootApplication main classes are boilerplate:
+  # a single main() covered trivially by each module's contextLoads
+  # smoke test. Qodana runs its coverage inspection statically without
+  # the JaCoCo XML report, so it reports them as 0% covered.
+  - name: JvmCoverageInspection
+    paths:
+      - "**/*Application.java"
 
 projectJDK: "21" #(Applied in CI/CD pipeline)
 
