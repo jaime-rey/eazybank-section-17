@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 @RestController
 @RequestMapping("/api/policies")
@@ -22,7 +23,7 @@ public class PolicyController {
 
     @PostMapping
     public ResponseEntity<Policy>  create(@Valid @RequestBody CreatePolicyRequest request){
-        Policy policy = createPolicyUseCase.execute(request.toCommand(), LocalDate.now());
+        Policy policy = createPolicyUseCase.execute(request.toCommand(), LocalDate.now(ZoneOffset.UTC));
         return ResponseEntity.status(HttpStatus.CREATED).body(policy);
     }
 
