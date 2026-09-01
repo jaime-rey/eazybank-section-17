@@ -1,23 +1,28 @@
 package com.eazybytes.accounts.controller;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.eazybytes.accounts.constants.AccountsConstants;
 import com.eazybytes.accounts.dto.AccountsContactInfoDto;
 import com.eazybytes.accounts.dto.CustomerDto;
+import com.eazybytes.accounts.dto.CustomerListItemDto;
+import com.eazybytes.accounts.dto.CustomerSearchCriteria;
+import com.eazybytes.accounts.dto.CustomerSearchDto;
 import com.eazybytes.accounts.exception.CustomerAlreadyExistsException;
 import com.eazybytes.accounts.exception.ResourceNotFoundException;
 import com.eazybytes.accounts.service.IAccountsService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -297,6 +302,40 @@ class AccountsControllerTest {
 
     @Test
     @DisplayName("GlobalExceptionHandler: any other exception from the service becomes a 500 with an ErrorResponseDto body")
+    void searchCustomers_returnsPageFromService() throws Exception {
+        CustomerListItemDto item = new CustomerListItemDto(1L, "Ada Lovelace",
+                "ada@example.com", "9345432123");
+        Page<CustomerListItemDto> page = new PageImpl<>(java.util.List.of(item));
+        when(iAccountsService.searchCustomers(any(CustomerSearchDto.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        mockMvc.perform(get("/api/customers/search").param("name", "Ada"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].customerId").value(1))
+                .andExpect(jsonPath("$.content[0].name").value("Ada Lovelace"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+
+        verify(iAccountsService).searchCustomers(any(CustomerSearchDto.class), any(Pageable.class));
+    }
+
+    @Test
+    void searchCustomersV2_returnsPageFromService() throws Exception {
+        CustomerListItemDto item = new CustomerListItemDto(2L, "Grace Hopper",
+                "grace@example.com", "9345432124");
+        Page<CustomerListItemDto> page = new PageImpl<>(java.util.List.of(item));
+        when(iAccountsService.searchCustomersV2(any(CustomerSearchCriteria.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        mockMvc.perform(get("/api/customers/search-v2").param("name", "Grace"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].customerId").value(2))
+                .andExpect(jsonPath("$.content[0].name").value("Grace Hopper"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+
+        verify(iAccountsService).searchCustomersV2(any(CustomerSearchCriteria.class), any(Pageable.class));
+    }
+
+    @Test
     void fetchAccount_serviceThrowsGenericException_returns500() throws Exception {
         when(iAccountsService.fetchAccount("9345432123"))
                 .thenThrow(new RuntimeException("database is on fire"));
@@ -308,4 +347,5 @@ class AccountsControllerTest {
                 .andExpect(jsonPath("$.errorMessage").value("database is on fire"))
                 .andExpect(jsonPath("$.errorTime").exists());
     }
+
 }

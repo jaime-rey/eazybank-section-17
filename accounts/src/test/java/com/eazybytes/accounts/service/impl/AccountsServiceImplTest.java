@@ -11,6 +11,7 @@ import com.eazybytes.accounts.mapper.AccountsMapper;
 import com.eazybytes.accounts.mapper.CustomerMapper;
 import com.eazybytes.accounts.repository.AccountsRepository;
 import com.eazybytes.accounts.repository.CustomerRepository;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,28 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.slf4j.LoggerFactory;
+
+import com.eazybytes.accounts.dto.CustomerListItemDto;
+import com.eazybytes.accounts.dto.CustomerSearchDto;
+import org.mockito.ArgumentMatchers;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import com.eazybytes.accounts.dto.CustomerSearchCriteria;
+import java.time.LocalDateTime;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.tuple;
+
 @ExtendWith(MockitoExtension.class)
 class AccountsServiceImplTest {
 
@@ -49,10 +72,7 @@ class AccountsServiceImplTest {
     @Test
     @DisplayName("createAccount: persists customer + account and publishes a communication message via StreamBridge")
     void createAccount_happyPath() {
-        CustomerDto dto = new CustomerDto();
-        dto.setName("Ada Lovelace");
-        dto.setEmail("ada@example.com");
-        dto.setMobileNumber("9345432123");
+        CustomerDto dto = createAda();
 
         when(customerRepository.findByMobileNumber("9345432123")).thenReturn(Optional.empty());
         Customer savedCustomer = new Customer();
@@ -162,10 +182,7 @@ class AccountsServiceImplTest {
         accountsDto.setAccountNumber(1234567890L);
         accountsDto.setAccountType("Checking");
         accountsDto.setBranchAddress("456 Second St");
-        CustomerDto customerDto = new CustomerDto();
-        customerDto.setName("Ada Lovelace");
-        customerDto.setEmail("ada@example.com");
-        customerDto.setMobileNumber("9345432123");
+        CustomerDto customerDto = createAda();
         customerDto.setAccountsDto(accountsDto);
 
         Customer existingCustomer = new Customer();
@@ -280,5 +297,178 @@ class AccountsServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Account")
                 .hasMessageContaining("9999");
+    }
+
+
+// ---------- sendCommunication branches ----------
+
+    @Test
+    @DisplayName("createAccount: logs INFO when streamBridge.send() returns true")
+    void createAccount_communicationPublishSuccess_logsInfo() {
+        Logger serviceLogger = (Logger) LoggerFactory.getLogger(AccountsServiceImpl.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        serviceLogger.addAppender(appender);
+
+        try {
+            CustomerDto dto = createAda();
+
+            when(customerRepository.findByMobileNumber("9345432123")).thenReturn(Optional.empty());
+            Customer savedCustomer = new Customer();
+            savedCustomer.setCustomerId(42L);
+            when(customerRepository.save(any(Customer.class))).thenReturn(savedCustomer);
+            Accounts savedAccount = new Accounts();
+            savedAccount.setAccountNumber(1234567890L);
+            savedAccount.setCustomer(savedCustomer);
+            when(accountsRepository.save(any(Accounts.class))).thenReturn(savedAccount);
+
+            when(streamBridge.send(eq("sendCommunication-out-0"), any(AccountsMsgDto.class)))
+                .thenReturn(true);
+
+            service.createAccount(dto);
+
+            boolean logged = appender.list.stream().anyMatch(e ->
+                e.getLevel() == Level.INFO
+                    && e.getFormattedMessage().contains("Communication event published")
+                    && e.getFormattedMessage().contains("1234567890"));
+            assertThat(logged).isTrue();
+        } finally {
+            serviceLogger.detachAppender(appender);
+        }
+    }
+
+    @Test
+    @DisplayName("createAccount: logs WARN when streamBridge.send() returns false")
+    void createAccount_communicationPublishFailure_logsWarn() {
+        // Attach a ListAppender to capture logs emitted by AccountsServiceImpl
+        Logger serviceLogger = (Logger) LoggerFactory.getLogger(AccountsServiceImpl.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        serviceLogger.addAppender(appender);
+
+        try {
+            // arrange
+            CustomerDto dto = createAda();
+
+            when(customerRepository.findByMobileNumber("9345432123")).thenReturn(Optional.empty());
+
+            Customer savedCustomer = new Customer();
+            savedCustomer.setCustomerId(42L);
+            when(customerRepository.save(any(Customer.class))).thenReturn(savedCustomer);
+
+            Accounts savedAccount = new Accounts();
+            savedAccount.setAccountNumber(1234567890L);
+            savedAccount.setCustomer(savedCustomer);
+            when(accountsRepository.save(any(Accounts.class))).thenReturn(savedAccount);
+
+            when(streamBridge.send(eq("sendCommunication-out-0"), any(AccountsMsgDto.class)))
+                .thenReturn(false);
+
+            // act
+            service.createAccount(dto);
+
+            // assert: a WARN with the expected text was recorded
+            boolean warned = appender.list.stream().anyMatch(e ->
+                e.getLevel() == Level.WARN
+                    && e.getFormattedMessage().contains("Communication event NOT published")
+                    && e.getFormattedMessage().contains("1234567890"));
+            assertThat(warned).isTrue();
+        } finally {
+            serviceLogger.detachAppender(appender);
+        }
+    }
+
+
+// ---------- searchCustomers ----------
+
+    @Test
+    @DisplayName("searchCustomers: delegates to repository and maps each Customer to a CustomerListItemDto")
+    void searchCustomers_mapsPageToDto() {
+        // arrange
+        CustomerSearchDto filters = new CustomerSearchDto("Ada", null, "934", null);
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Customer c1 = new Customer();
+        c1.setCustomerId(1L);
+        c1.setName("Ada Lovelace");
+        c1.setEmail("ada@example.com");
+        c1.setMobileNumber("9345432123");
+
+        Customer c2 = new Customer();
+        c2.setCustomerId(2L);
+        c2.setName("Grace Hopper");
+        c2.setEmail("grace@example.com");
+        c2.setMobileNumber("9345432124");
+
+        Page<Customer> repoPage = new PageImpl<>(List.of(c1, c2), pageable, 2);
+        when(customerRepository.findAll(
+            ArgumentMatchers.<Specification<Customer>>any(),
+            eq(pageable))).thenReturn(repoPage);
+
+        // act
+        Page<CustomerListItemDto> result = service.searchCustomers(filters, pageable);
+
+        // assert
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent())
+            .extracting(CustomerListItemDto::customerId,
+                CustomerListItemDto::name,
+                CustomerListItemDto::email,
+                CustomerListItemDto::mobileNumber)
+            .containsExactly(
+                tuple(1L, "Ada Lovelace", "ada@example.com", "9345432123"),
+                tuple(2L, "Grace Hopper", "grace@example.com", "9345432124"));
+
+        verify(customerRepository).findAll(
+            ArgumentMatchers.<Specification<Customer>>any(),
+            eq(pageable));
+    }
+
+    @Test
+    @DisplayName("searchCustomersV2: delegates to repository with built spec and maps to CustomerListItemDto")
+    void searchCustomersV2_mapsPageToDto() {
+        // arrange
+        CustomerSearchCriteria criteria = new CustomerSearchCriteria(
+            "Ada", null, null,
+            LocalDateTime.now().minusDays(30), null,
+            null, null, Boolean.TRUE, null, null);
+        Pageable pageable = PageRequest.of(0, 5);
+
+        Customer c1 = new Customer();
+        c1.setCustomerId(10L);
+        c1.setName("Ada Lovelace");
+        c1.setEmail("ada@example.com");
+        c1.setMobileNumber("9345432123");
+
+        Page<Customer> repoPage = new PageImpl<>(List.of(c1), pageable, 1);
+        when(customerRepository.findAll(
+            ArgumentMatchers.<Specification<Customer>>any(),
+            eq(pageable))).thenReturn(repoPage);
+
+        // act
+        Page<CustomerListItemDto> result = service.searchCustomersV2(criteria, pageable);
+
+        // assert
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent())
+            .singleElement()
+            .satisfies(item -> {
+                assertThat(item.customerId()).isEqualTo(10L);
+                assertThat(item.name()).isEqualTo("Ada Lovelace");
+                assertThat(item.email()).isEqualTo("ada@example.com");
+                assertThat(item.mobileNumber()).isEqualTo("9345432123");
+            });
+
+        verify(customerRepository).findAll(
+            ArgumentMatchers.<Specification<Customer>>any(),
+            eq(pageable));
+    }
+
+    private static @NonNull CustomerDto createAda() {
+        CustomerDto dto = new CustomerDto();
+        dto.setName("Ada Lovelace");
+        dto.setEmail("ada@example.com");
+        dto.setMobileNumber("9345432123");
+        return dto;
     }
 }

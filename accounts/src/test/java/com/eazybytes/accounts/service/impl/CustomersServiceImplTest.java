@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Optional;
+import java.util.concurrent.CompletionException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -123,6 +124,37 @@ class CustomersServiceImplTest {
                 .hasMessageContaining("Account")
                 .hasMessageContaining("customerId")
                 .hasMessageContaining("42");
+    }
+
+    @Test
+    @DisplayName("fetchCustomerDetails: leaves both loansDto and cardsDto null when both feign clients return null")
+    void fetchCustomerDetails_bothFeignClientsReturnNull() {
+        when(customerRepository.findByMobileNumber(MOBILE)).thenReturn(Optional.of(customer()));
+        when(accountsRepository.findByCustomer_CustomerId(42L)).thenReturn(Optional.of(account()));
+        when(loansFeignClient.fetchLoanDetails(CORRELATION_ID, MOBILE)).thenReturn(null);
+        when(cardsFeignClient.fetchCardDetails(CORRELATION_ID, MOBILE)).thenReturn(null);
+
+        CustomerDetailsDto result = service.fetchCustomerDetails(MOBILE, CORRELATION_ID);
+
+        assertThat(result.getAccountsDto()).isNotNull();
+        assertThat(result.getLoansDto()).isNull();
+        assertThat(result.getCardsDto()).isNull();
+    }
+
+    @Test
+    @DisplayName("fetchCustomerDetails: rethrows a feign-client failure wrapped in CompletionException")
+    void fetchCustomerDetails_feignClientThrows_propagatesCompletionException() {
+        when(customerRepository.findByMobileNumber(MOBILE)).thenReturn(Optional.of(customer()));
+        when(accountsRepository.findByCustomer_CustomerId(42L)).thenReturn(Optional.of(account()));
+        RuntimeException downstream = new RuntimeException("cards service is down");
+        when(cardsFeignClient.fetchCardDetails(CORRELATION_ID, MOBILE)).thenThrow(downstream);
+        when(loansFeignClient.fetchLoanDetails(CORRELATION_ID, MOBILE))
+                .thenReturn(ResponseEntity.ok(new LoansDto()));
+
+        assertThatThrownBy(() -> service.fetchCustomerDetails(MOBILE, CORRELATION_ID))
+                .isInstanceOf(CompletionException.class)
+                .hasRootCauseInstanceOf(RuntimeException.class)
+                .hasRootCauseMessage("cards service is down");
     }
 
     // ---------- fixtures ----------

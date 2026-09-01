@@ -18,6 +18,9 @@ helm/**/charts/*.tgz
 # Qodana output (local scans)
 .qodana/
 
+# RepoGraph local index
+.repograph/
+
 # OS
 .DS_Store
 Thumbs.db
