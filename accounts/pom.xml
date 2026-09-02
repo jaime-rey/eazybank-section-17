@@ -310,6 +310,14 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.13</version>
+                <configuration>
+                    <!-- The @SpringBootApplication class only holds main(); @SpringBootTest
+                         boots the context directly and never invokes it, so it would sit at
+                         0% forever and skew the module average. -->
+                    <excludes>
+                        <exclude>**/AccountsApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
