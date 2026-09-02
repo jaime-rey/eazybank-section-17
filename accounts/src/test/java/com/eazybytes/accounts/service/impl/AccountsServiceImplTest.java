@@ -72,7 +72,7 @@ class AccountsServiceImplTest {
     @Test
     @DisplayName("createAccount: persists customer + account and publishes a communication message via StreamBridge")
     void createAccount_happyPath() {
-        CustomerDto dto = createAda();
+        CustomerDto dto = createAdaDto();
 
         when(customerRepository.findByMobileNumber("9345432123")).thenReturn(Optional.empty());
         Customer savedCustomer = new Customer();
@@ -182,7 +182,7 @@ class AccountsServiceImplTest {
         accountsDto.setAccountNumber(1234567890L);
         accountsDto.setAccountType("Checking");
         accountsDto.setBranchAddress("456 Second St");
-        CustomerDto customerDto = createAda();
+        CustomerDto customerDto = createAdaDto();
         customerDto.setAccountsDto(accountsDto);
 
         Customer existingCustomer = new Customer();
@@ -311,7 +311,7 @@ class AccountsServiceImplTest {
         serviceLogger.addAppender(appender);
 
         try {
-            CustomerDto dto = createAda();
+            CustomerDto dto = createAdaDto();
 
             when(customerRepository.findByMobileNumber("9345432123")).thenReturn(Optional.empty());
             Customer savedCustomer = new Customer();
@@ -348,7 +348,7 @@ class AccountsServiceImplTest {
 
         try {
             // arrange
-            CustomerDto dto = createAda();
+            CustomerDto dto = createAdaDto();
 
             when(customerRepository.findByMobileNumber("9345432123")).thenReturn(Optional.empty());
 
@@ -464,7 +464,7 @@ class AccountsServiceImplTest {
             eq(pageable));
     }
 
-    private static @NonNull CustomerDto createAda() {
+    private static @NonNull CustomerDto createAdaDto() {
         CustomerDto dto = new CustomerDto();
         dto.setName("Ada Lovelace");
         dto.setEmail("ada@example.com");
