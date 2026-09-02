@@ -5,14 +5,10 @@ import com.eazybytes.accounts.repository.AccountsRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.cloud.stream.binder.test.EnableTestBinder;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,14 +17,9 @@ import com.eazybytes.accounts.entity.Customer;
 import com.eazybytes.accounts.repository.CustomerRepository;
 
 @SpringBootTest
-@Testcontainers(disabledWithoutDocker = true)
 @ActiveProfiles("integration")
 @EnableTestBinder
-class OptimisticLockingIT {
-
-    @Container
-    @ServiceConnection
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.4");
+class OptimisticLockingIT extends AbstractMySqlIT {
 
     @Autowired
     private AccountsRepository accountsRepository;
