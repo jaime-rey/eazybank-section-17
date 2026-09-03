@@ -1,0 +1,18 @@
+spring:
+  config:
+    import: "optional:configserver:"
+  cloud:
+    discovery:
+      enabled: false
+    kubernetes:
+      discovery:
+        enabled: false
+    function:
+      definition: updateCommunication
+    stream:
+      bindings:
+        sendCommunication-out-0:
+          destination: send-communication
+        updateCommunication-in-0:
+          destination: communication-sent
+          group: accounts
