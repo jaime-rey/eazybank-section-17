@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_02fzjdu" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.50.1" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.24.0">
+  <bpmn:process id="credit-request" name="Credit Card Request" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_RequestReceived" name="Request received">
+      <bpmn:outgoing>Flow_1inpyyd</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_1inpyyd" sourceRef="StartEvent_RequestReceived" targetRef="Task_VerifyHistory" />
+    <bpmn:serviceTask id="Task_VerifyHistory" name="Verify credit history" camunda:delegateExpression="${verifyCreditHistoryDelegate}">
+      <bpmn:incoming>Flow_1inpyyd</bpmn:incoming>
+      <bpmn:outgoing>Flow_1efopgz</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_ScoreCheck" name="Decision Result" default="Flow_1wglqjy">
+      <bpmn:incoming>Flow_031dn0w</bpmn:incoming>
+      <bpmn:outgoing>Flow_1p4b38t</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0k3aeam</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1wglqjy</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_1p4b38t" name="auto" sourceRef="Gateway_ScoreCheck" targetRef="Task_AutoApprove">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${dmnReason == "AUTO_APPROVED"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Task_AutoApprove" name="Auto-approve" camunda:delegateExpression="${autoApproveDelegate}">
+      <bpmn:incoming>Flow_1p4b38t</bpmn:incoming>
+      <bpmn:outgoing>Flow_1suosqr</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEvent_Approved" name="Approved">
+      <bpmn:incoming>Flow_1suosqr</bpmn:incoming>
+      <bpmn:incoming>Flow_1jv1n61</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1suosqr" sourceRef="Task_AutoApprove" targetRef="EndEvent_Approved" />
+    <bpmn:sequenceFlow id="Flow_0k3aeam" name="manual" sourceRef="Gateway_ScoreCheck" targetRef="Task_ManualReview">
+      <bpmn:extensionElements />
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${dmnReason == "MANUAL_REVIEW_REQUIRED"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:userTask id="Task_ManualReview" name="Manual review" camunda:assignee="admin">
+      <bpmn:incoming>Flow_0k3aeam</bpmn:incoming>
+      <bpmn:outgoing>Flow_0jgiken</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_ManualDecision" name="Approved?" default="Flow_0poglr9">
+      <bpmn:incoming>Flow_0jgiken</bpmn:incoming>
+      <bpmn:outgoing>Flow_0poglr9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1jv1n61</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0jgiken" sourceRef="Task_ManualReview" targetRef="Gateway_ManualDecision" />
+    <bpmn:endEvent id="EndEvent_Rejected" name="Rejected">
+      <bpmn:incoming>Flow_0poglr9</bpmn:incoming>
+      <bpmn:incoming>Flow_1wglqjy</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0poglr9" name="no" sourceRef="Gateway_ManualDecision" targetRef="EndEvent_Rejected" />
+    <bpmn:sequenceFlow id="Flow_1jv1n61" name="yes" sourceRef="Gateway_ManualDecision" targetRef="EndEvent_Approved">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${approved == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1efopgz" sourceRef="Task_VerifyHistory" targetRef="Task_EvaluateRules" />
+    <bpmn:businessRuleTask id="Task_EvaluateRules" name="Evaluate credit rules" camunda:resultVariable="creditRulesRaw" camunda:decisionRef="credit-approval">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:outputParameter name="dmnApproved">${creditRulesRaw[0].approved}</camunda:outputParameter>
+          <camunda:outputParameter name="dmnReason">${creditRulesRaw[0].reason}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1efopgz</bpmn:incoming>
+      <bpmn:outgoing>Flow_031dn0w</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:sequenceFlow id="Flow_031dn0w" sourceRef="Task_EvaluateRules" targetRef="Gateway_ScoreCheck" />
+    <bpmn:sequenceFlow id="Flow_1wglqjy" name="Default" sourceRef="Gateway_ScoreCheck" targetRef="EndEvent_Rejected" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="credit-request">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_RequestReceived">
+        <dc:Bounds x="182" y="272" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="157" y="315" width="86" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1y1jir4_di" bpmnElement="Task_VerifyHistory">
+        <dc:Bounds x="320" y="250" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0y1p1mg_di" bpmnElement="Gateway_ScoreCheck" isMarkerVisible="true">
+        <dc:Bounds x="655" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="688.5" y="223" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1ib3fm1_di" bpmnElement="Task_EvaluateRules">
+        <dc:Bounds x="480" y="250" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1xs4nhg_di" bpmnElement="Task_AutoApprove">
+        <dc:Bounds x="770" y="540" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0hf2ui1_di" bpmnElement="EndEvent_Rejected">
+        <dc:Bounds x="1212" y="272" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1208" y="315" width="44" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_05yc652_di" bpmnElement="Task_ManualReview">
+        <dc:Bounds x="790" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0c4tksm_di" bpmnElement="Gateway_ManualDecision" isMarkerVisible="true">
+        <dc:Bounds x="965" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="963" y="241" width="54" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1l8cwzj_di" bpmnElement="EndEvent_Approved">
+        <dc:Bounds x="972" y="562" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="966" y="608" width="48" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1inpyyd_di" bpmnElement="Flow_1inpyyd">
+        <di:waypoint x="218" y="290" />
+        <di:waypoint x="320" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1p4b38t_di" bpmnElement="Flow_1p4b38t">
+        <di:waypoint x="680" y="315" />
+        <di:waypoint x="680" y="580" />
+        <di:waypoint x="770" y="580" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="716" y="562" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1suosqr_di" bpmnElement="Flow_1suosqr">
+        <di:waypoint x="870" y="580" />
+        <di:waypoint x="972" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0k3aeam_di" bpmnElement="Flow_0k3aeam">
+        <di:waypoint x="705" y="290" />
+        <di:waypoint x="790" y="290" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="733" y="266" width="37" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0jgiken_di" bpmnElement="Flow_0jgiken">
+        <di:waypoint x="890" y="290" />
+        <di:waypoint x="965" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0poglr9_di" bpmnElement="Flow_0poglr9">
+        <di:waypoint x="1015" y="290" />
+        <di:waypoint x="1212" y="290" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1034" y="278" width="13" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1jv1n61_di" bpmnElement="Flow_1jv1n61">
+        <di:waypoint x="990" y="315" />
+        <di:waypoint x="990" y="562" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="966" y="414" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1efopgz_di" bpmnElement="Flow_1efopgz">
+        <di:waypoint x="420" y="290" />
+        <di:waypoint x="480" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_031dn0w_di" bpmnElement="Flow_031dn0w">
+        <di:waypoint x="580" y="290" />
+        <di:waypoint x="655" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1wglqjy_di" bpmnElement="Flow_1wglqjy">
+        <di:waypoint x="680" y="265" />
+        <di:waypoint x="680" y="80" />
+        <di:waypoint x="1230" y="80" />
+        <di:waypoint x="1230" y="272" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="938" y="62" width="35" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
